@@ -23,7 +23,7 @@ const sendOtpMail = async (email, otp) => {
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log("✅ OTP Email sent:", info.response);
+    
   } catch (error) {
     console.error("❌ Failed to send OTP Email:", error);
   }
@@ -152,13 +152,11 @@ const resendVerification = async (req, res) => {
  */
 const loginUser = async (req, res) => {
   const { email, password } = req.body;
-  // Minimal logging: avoid printing passwords, full user objects, emails or IDs
-  console.log('Auth: login attempt');
+
 
   try {
     // Check if user exists
     const user = await User.findOne({ email });
-    console.log(`Auth: user lookup ${user ? 'found' : 'not found'}`);
 
     if (!user) {
       return res.status(400).json({ message: 'Invalid credentials' });
@@ -167,11 +165,11 @@ const loginUser = async (req, res) => {
     // Check if password matches (do not log the boolean in production if you prefer silence)
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      console.log('Auth: failed login attempt');
+      
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    console.log('Auth: successful login');
+    
 
     // User is authenticated, return token
     res.status(200).json({
