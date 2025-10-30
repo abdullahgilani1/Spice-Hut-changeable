@@ -16,7 +16,7 @@ const Menu = () => {
         if (Array.isArray(cats) && cats.length) {
           const API_BASE = (
             'https://spicehut-8mqx.onrender.com/api'
-          ).replace(/\/api$/, "");
+          )
           // map to the same shape as static menuCategories where possible
           const mapped = cats.map((c) => {
             let img = c.image || "/home.jpg";
@@ -77,7 +77,7 @@ const Menu = () => {
   const getItemImage = (item) => {
     const API_BASE = (
       'https://spicehut-8mqx.onrender.com/api'
-    ).replace(/\/api$/, "");
+    )
     if (item.image && item.image.startsWith("/uploads")) {
       return `${API_BASE}${item.image}`;
     }

@@ -18,8 +18,7 @@ const CategoryPage = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const API_BASE = (
-    'https://spicehut-8mqx.onrender.com/api'
-  ).replace(/\/api$/, "");
+    'https://spicehut-8mqx.onrender.com/api')
 
   useEffect(() => {
     (async () => {

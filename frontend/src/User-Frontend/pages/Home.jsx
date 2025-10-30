@@ -16,7 +16,7 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
   const API_BASE = (
     'https://spicehut-8mqx.onrender.com/api'
-  ).replace(/\/api$/, "");
+  )
 
   useEffect(() => {
     (async () => {
