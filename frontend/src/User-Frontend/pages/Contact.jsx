@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { contentAPI } from '../../services/api';
+import { useLocation } from 'react-router-dom';
+import { contentAPI, branchAPI } from '../../services/api';
 
 const Contact = () => {
   const [contactContent, setContactContent] = useState(null);
+  const [branchInfo, setBranchInfo] = useState(null);
   const [loading, setLoading] = useState(true);
+  const location = useLocation();
 
   useEffect(() => {
     (async () => {
@@ -23,8 +26,28 @@ const Contact = () => {
     })();
   }, []);
 
+  // If a branchId query param is present (from Support -> Contact), fetch branch info by id
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const branchId = params.get('branchId');
+    if (!branchId) return;
+
+    (async () => {
+      try {
+        const branch = await branchAPI.getBranch(branchId);
+        if (branch) setBranchInfo(branch);
+      } catch (err) {
+        // no branch found or error - keep branchInfo null and fall back to contact content
+        console.warn('No branch found for id', branchId, err?.response?.data || err.message || err);
+      }
+    })();
+  }, [location.search]);
+
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   if (!contactContent) return <div className="min-h-screen flex items-center justify-center">Contact information is not available.</div>;
+
+  const params = new URLSearchParams(location.search);
+  const branchIdParam = params.get('branchId');
 
   return (
     <div className="min-h-screen bg-[#FF6A00] flex flex-col">
@@ -41,14 +64,35 @@ const Contact = () => {
           <div className="bg-[#3B2410] p-6 rounded-lg">
             <h2 className="text-2xl font-bold text-white mb-4">Contact Information</h2>
             <div className="space-y-4 text-white">
-              <div>
-                <h3 className="font-semibold mb-2">Address</h3>
-                <p className="opacity-90">{contactContent.address}</p>
-              </div>
-              <div>
-                <h3 className="font-semibold mb-2">Phone</h3>
-                <p className="opacity-90">{contactContent.phone}</p>
-              </div>
+              {/* Address: If branchId param present show only branch address (if available). Otherwise show site static address. */}
+              {branchIdParam ? (
+                branchInfo?.fullAddress ? (
+                  <div>
+                    <h3 className="font-semibold mb-2">Address</h3>
+                    <p className="opacity-90">{branchInfo.fullAddress}</p>
+                  </div>
+                ) : null
+              ) : (
+                <div>
+                  <h3 className="font-semibold mb-2">Address</h3>
+                  <p className="opacity-90">{contactContent.address}</p>
+                </div>
+              )}
+
+              {/* Phone: If branchId param present show only branch phone (if available). Otherwise show site static phone. */}
+              {branchIdParam ? (
+                branchInfo?.phone ? (
+                  <div>
+                    <h3 className="font-semibold mb-2">Phone</h3>
+                    <p className="opacity-90">{branchInfo.phone}</p>
+                  </div>
+                ) : null
+              ) : (
+                <div>
+                  <h3 className="font-semibold mb-2">Phone</h3>
+                  <p className="opacity-90">{contactContent.phone}</p>
+                </div>
+              )}
               <div>
                 <h3 className="font-semibold mb-2">Email</h3>
                 <p className="opacity-90">{contactContent.email}</p>

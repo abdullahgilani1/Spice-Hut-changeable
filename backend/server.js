@@ -9,6 +9,8 @@ const profileRoutes = require('./routes/profileRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const menuRoutes = require('./routes/menuRoutes');
 const contentRoutes = require('./routes/contentRoutes');
+const branchRoutes = require('./routes/branchRoutes');
+const utilsRoutes = require('./routes/utilsRoutes');
 const cors = require('cors');
 
 // Load environment variables
@@ -37,6 +39,8 @@ app.use('/api/profile', profileRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/menu', menuRoutes);
 app.use('/api/content', contentRoutes);
+app.use('/api/branches', branchRoutes);
+app.use('/api/utils', utilsRoutes);
 
 const _dirname = path.resolve()
 

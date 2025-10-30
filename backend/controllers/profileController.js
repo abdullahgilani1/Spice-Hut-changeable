@@ -20,6 +20,14 @@ const updateProfile = async (req, res) => {
     user.email = req.body.email || user.email;
       // Allow phone update
       user.phone = req.body.phone || user.phone;
+    // Allow storing current location coordinates (from Profile -> Current Location)
+    if (req.body.currentLocation && typeof req.body.currentLocation === 'object') {
+      const lat = Number(req.body.currentLocation.latitude);
+      const lng = Number(req.body.currentLocation.longitude);
+      if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
+        user.currentLocation = { latitude: lat, longitude: lng, updatedAt: new Date() };
+      }
+    }
     if (req.body.password) {
       user.password = req.body.password;
     }

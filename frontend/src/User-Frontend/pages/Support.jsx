@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { branchAPI } from '../../services/api';
 import {
   MdPhone,
   MdEmail,
@@ -93,6 +94,8 @@ export default function SupportPage() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [expandedFaq, setExpandedFaq] = useState(null);
   const [isVisitUsExpanded, setIsVisitUsExpanded] = useState(false);
+  const [branches, setBranches] = useState([]);
+  const [branchesLoading, setBranchesLoading] = useState(true);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -121,6 +124,27 @@ export default function SupportPage() {
   const handleInputChange = (field, value) => {
     setFormData({ ...formData, [field]: value });
   };
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const data = await branchAPI.getBranches();
+        if (!mounted) return;
+        // api wrapper returns response.data already; ensure array
+        setBranches(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.warn('Failed to load branches for Visit Us', err?.response?.data || err.message || err);
+        if (mounted) setBranches([]);
+      } finally {
+        if (mounted) setBranchesLoading(false);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#FF6A00] flex flex-col">
@@ -167,26 +191,21 @@ export default function SupportPage() {
                 }`}
               >
                 <div className="p-6 space-y-2">
-                  {[
-                    "Campbell River",
-                    "Cannoore",
-                    "Comox",
-                    "Cranbrook",
-                    "Fort Saskatchewan",
-                    "Invermere",
-                    "Lady Smith",
-                    "Lloydminster",
-                    "Port Alberni",
-                    "Tofino",
-                  ].map((location) => (
-                    <Link
-                      key={location}
-                      to="/user/contact"
-                      className="block py-2 px-3 text-[#FFB366] hover:text-white hover:bg-[#4B0B0B] rounded-md transition-colors duration-200"
-                    >
-                      {location}
-                    </Link>
-                  ))}
+                  {branchesLoading ? (
+                    <div className="text-sm text-[#FFB366]">Loading locations...</div>
+                  ) : branches.length === 0 ? (
+                    <div className="text-sm text-[#FFB366]">No locations available.</div>
+                  ) : (
+                    branches.map((b) => (
+                      <Link
+                        key={b._id}
+                        to={`/user/contact?branchId=${encodeURIComponent(b._id)}`}
+                        className="block py-2 px-3 text-[#FFB366] hover:text-white hover:bg-[#4B0B0B] rounded-md transition-colors duration-200"
+                      >
+                        {b.city || b.name}
+                      </Link>
+                    ))
+                  )}
                 </div>
               </div>
             </div>

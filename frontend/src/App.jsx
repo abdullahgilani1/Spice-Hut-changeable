@@ -11,6 +11,7 @@ import MenuManagement from './Admin-Frontend/Pages/MenuManagement';
 import Orders from './Admin-Frontend/Pages/Orders';
 import Customers from './Admin-Frontend/Pages/Customers';
 import Admins from './Admin-Frontend/Pages/Admins';
+import Branches from './Admin-Frontend/Pages/Branches';
 import AdminProfile from './Admin-Frontend/Pages/Profile';
 import Dashboard from './Admin-Frontend/Pages/Dashboard';
 import Reports from './Admin-Frontend/Pages/Reports';
@@ -63,6 +64,7 @@ function App() {
               <Route path="orders" element={<Orders />} />
               <Route path="customers" element={<Customers />} />
               <Route path="admins" element={<Admins />} />
+              <Route path="branches" element={<Branches />} />
               <Route path="profile" element={<AdminProfile />} />
               <Route path="reports" element={<Reports />} />
               <Route path="settings" element={<Settings />} />

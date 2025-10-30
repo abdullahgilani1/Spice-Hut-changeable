@@ -39,6 +39,12 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  // optional last known coordinates of the user (set via 'Current Location' button)
+  currentLocation: {
+    latitude: { type: Number },
+    longitude: { type: Number },
+    updatedAt: { type: Date }
+  },
   // Email verification fields
   isVerified: { type: Boolean, default: false },
   verifyToken: { type: String, default: '' },

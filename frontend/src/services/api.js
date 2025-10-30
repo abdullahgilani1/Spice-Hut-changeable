@@ -185,6 +185,19 @@ export const categoryAPI = {
   }
 };
 
+// Branch API
+export const branchAPI = {
+  // Public
+  getBranches: async () => api.get('/branches'),
+  getBranchByCity: async (city) => api.get('/branches/by-city', { params: { city } }),
+  getBranch: async (id) => api.get(`/branches/${id}`),
+
+  // Admin
+  createBranch: async (data) => api.post('/branches', data),
+  updateBranch: async (id, data) => api.put(`/branches/${id}`, data),
+  deleteBranch: async (id) => api.delete(`/branches/${id}`),
+};
+
 // Order API (for future use)
 export const orderAPI = {
   // Create order
@@ -228,6 +241,11 @@ export const contentAPI = {
   upsertContent: async (contentData) => {
     return api.post('/content', contentData);
   }
+};
+
+// Utils API: server-side helpers (reverse geocode)
+export const utilsAPI = {
+  reverseGeocode: async (latitude, longitude) => api.post('/utils/reverse-geocode', { latitude, longitude }),
 };
 
 

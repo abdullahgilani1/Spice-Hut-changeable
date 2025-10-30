@@ -27,6 +27,17 @@ const orderSchema = new mongoose.Schema({
   // optional parsed fields extracted from address string
   city: { type: String, default: '' },
   postalCode: { type: String, default: '' },
+  // Log user and branch coordinates for reference
+  userLocation: {
+    latitude: { type: Number },
+    longitude: { type: Number },
+  },
+  branchLocation: {
+    latitude: { type: Number },
+    longitude: { type: Number },
+  },
+  // Name of the branch that will serve this order (e.g., 'Comox')
+  servingBranch: { type: String, default: '' },
 }, { timestamps: true });
 
 // Cache created models in mongoose.models (Mongoose handles this) so repeated calls

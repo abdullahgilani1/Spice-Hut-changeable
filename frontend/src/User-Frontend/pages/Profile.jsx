@@ -15,9 +15,8 @@ import {
   FaLocationArrow,
 } from "react-icons/fa";
 import { useCart } from "../context.cart.jsx";
-import { profileAPI, orderAPI } from "../../services/api";
+import { profileAPI, orderAPI, utilsAPI } from "../../services/api";
 import { useAuth } from "../../contexts/AuthContext.jsx";
-import { getCurrentLocation } from "../utils/geolocation";
 import PasswordInput from "../components/PasswordInput";
 import { validatePassword } from "../utils/passwordUtils";
 import { FiEye, FiEyeOff } from "react-icons/fi";
@@ -275,19 +274,58 @@ const Profile = () => {
 
   const handleUseCurrentLocation = () => {
     setLocationError(null);
-    getCurrentLocation(
-      (address) => {
-        setNewAddress((prev) => ({
-          ...prev,
-          addressLine1: address.addressLine1 || prev.addressLine1,
-          city: address.city || prev.city,
-          postalCode: address.postalCode || prev.postalCode,
-        }));
-      },
-      (error) => {
-        setLocationError(error);
+    if (!navigator.geolocation) {
+      setLocationError('Geolocation is not supported by your browser.');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      try {
+        const { latitude, longitude } = pos.coords;
+        // Call server-side reverse geocode to get structured address
+        try {
+          const geo = await utilsAPI.reverseGeocode(latitude, longitude);
+          // geo: { formattedAddress, city, province, postalCode, country, latitude, longitude }
+          // Update the newAddress fields for quick add and also update user profile with currentLocation
+          setNewAddress((prev) => ({
+            ...prev,
+            addressLine1: geo.formattedAddress || prev.addressLine1,
+            city: geo.city || prev.city,
+            postalCode: geo.postalCode || prev.postalCode,
+          }));
+
+          // Persist user's current coordinates to profile so backend can use them when placing orders
+          try {
+            await profileAPI.updateProfile({ currentLocation: { latitude, longitude } });
+          } catch (upErr) {
+            console.warn('Failed to save currentLocation to profile', upErr);
+          }
+        } catch (rgErr) {
+          console.error('Reverse geocode failed', rgErr);
+          const message = rgErr?.response?.data?.message || rgErr?.message || 'Unable to resolve your location to an address.';
+          setLocationError(message + ' (reverse geocode)');
+        }
+      } catch (err) {
+        console.error('Geolocation handling failed', err);
+        setLocationError('Unable to read your location.');
       }
-    );
+    }, (err) => {
+      let message = 'Unable to get location, please enter your address manually.';
+      switch (err.code) {
+        case err.PERMISSION_DENIED:
+          message = 'Location access denied. Please allow location access and try again.';
+          break;
+        case err.POSITION_UNAVAILABLE:
+          message = 'Location information is unavailable.';
+          break;
+        case err.TIMEOUT:
+          message = 'Location request timed out.';
+          break;
+        default:
+          break;
+      }
+      setLocationError(message);
+    }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 });
   };
 
   const [editingAddressId, setEditingAddressId] = useState(null);

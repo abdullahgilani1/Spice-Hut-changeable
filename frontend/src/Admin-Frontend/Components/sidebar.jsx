@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { FiHome, FiUsers, FiShoppingCart, FiSettings, FiUser, FiLogOut, FiX, FiBarChart } from "react-icons/fi";
+import { FiHome, FiUsers, FiShoppingCart, FiSettings, FiUser, FiLogOut, FiX, FiBarChart, FiMapPin } from "react-icons/fi";
 import { useAuth } from "../../contexts/AuthContext";
 import LogoutButton from "../../components/LogoutButton";
 
@@ -10,6 +10,7 @@ const links = [
   { to: "/admin/orders", label: "Orders", icon: <FiShoppingCart /> },
   { to: "/admin/customers", label: "Customers", icon: <FiUsers /> },
   { to: "/admin/admins", label: "Admins", icon: <FiUser /> },
+  { to: "/admin/branches", label: "Branches", icon: <FiMapPin /> },
   { to: "/admin/settings", label: "Content Management", icon: <FiSettings /> },
 ];
 

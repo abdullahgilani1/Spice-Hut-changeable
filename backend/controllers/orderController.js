@@ -1,6 +1,57 @@
 const { getOrderModel, DefaultOrder } = require('../models/Order');
 const User = require('../models/User');
 const OrderCounter = require('../models/OrderCounter');
+const Branch = require('../models/Branch');
+const https = require('https');
+const { URL } = require('url');
+
+// Find nearest branch by coordinates using Google Distance Matrix API
+async function findNearestBranchByCoords(lat, lng) {
+  // get branches with coordinates
+  const branches = await Branch.find({ latitude: { $ne: null }, longitude: { $ne: null } });
+  if (!branches || branches.length === 0) return null;
+
+  // build destinations string: lat,lng|lat2,lng2
+  const destinations = branches.map(b => `${b.latitude},${b.longitude}`).join('|');
+  const origins = `${lat},${lng}`;
+
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+  if (!apiKey) throw new Error('GOOGLE_MAPS_API_KEY not configured');
+
+  const url = new URL('https://maps.googleapis.com/maps/api/distancematrix/json');
+  url.searchParams.set('origins', origins);
+  url.searchParams.set('destinations', destinations);
+  url.searchParams.set('key', apiKey);
+  url.searchParams.set('units', 'metric');
+
+  // perform GET
+  const data = await new Promise((resolve, reject) => {
+    https.get(url.toString(), (resp) => {
+      let raw = '';
+      resp.on('data', (chunk) => { raw += chunk; });
+      resp.on('end', () => {
+        try {
+          const parsed = JSON.parse(raw);
+          resolve(parsed);
+        } catch (e) { reject(e); }
+      });
+    }).on('error', (err) => reject(err));
+  });
+
+  if (!data || !data.rows || !Array.isArray(data.rows) || data.rows.length === 0) return null;
+  const elements = data.rows[0].elements || [];
+  // find smallest distance value among OK elements
+  let minIndex = -1;
+  let minDistance = Number.POSITIVE_INFINITY;
+  for (let i = 0; i < elements.length; i++) {
+    const el = elements[i];
+    if (!el || el.status !== 'OK') continue;
+    const dist = typeof el.distance?.value === 'number' ? el.distance.value : Number.POSITIVE_INFINITY;
+    if (dist < minDistance) { minDistance = dist; minIndex = i; }
+  }
+  if (minIndex === -1) return null;
+  return branches[minIndex] || null;
+}
 
 // List of client branch locations (as provided). Keep in sync with client list.
 const BRANCHES = [
@@ -97,7 +148,7 @@ const generateOrderId = async () => {
 const createOrder = async (req, res) => {
   try {
     // Accept optional explicit city/postalCode from client to avoid lossy parsing
-    const { customerId, customerName, items, total, paymentMethod, address, city: providedCity, postalCode: providedPostal, pointsUsed = 0, location } = req.body;
+    const { customerId, customerName, items, total, paymentMethod, address, city: providedCity, postalCode: providedPostal, pointsUsed = 0, location, currentLocation } = req.body;
 
     if (!customerId || !items || typeof total === 'undefined') {
       return res.status(400).json({ message: 'Missing required order fields' });
@@ -151,8 +202,24 @@ const createOrder = async (req, res) => {
           }
         }
 
-        // If caller provided explicit location, use it. Otherwise try to infer branch from finalCity.
+        // If caller provided explicit location (branch name), use it.
+        // Otherwise, if currentLocation (coords) is provided in the request or present on user profile, determine nearest branch using Distance Matrix API.
         let branchToUse = location;
+        // prefer explicit currentLocation param from request, otherwise fallback to user's stored currentLocation
+        const userCoords = (currentLocation && currentLocation.latitude && currentLocation.longitude) ? currentLocation : (user.currentLocation || null);
+        if (!branchToUse && userCoords && userCoords.latitude && userCoords.longitude) {
+          try {
+            // find nearest branch by coordinates
+            const nearest = await findNearestBranchByCoords(userCoords.latitude, userCoords.longitude);
+            if (nearest) {
+              branchToUse = nearest.city || nearest.name || '';
+            }
+          } catch (nbErr) {
+            console.warn('Failed to determine nearest branch by coords, falling back to city inference', nbErr);
+          }
+        }
+
+        // If still not determined, try to infer branch from finalCity.
         if (!branchToUse) {
           const cityNorm = (finalCity || '').toString().trim().toLowerCase();
           if (cityNorm) {
@@ -168,7 +235,8 @@ const createOrder = async (req, res) => {
         chosenModel = branchToUse ? getOrderModel(branchToUse) : DefaultOrder;
 
         // Create order record including validated points used/earned.
-        const order = await chosenModel.create({
+        // Build order payload and include location logs if available
+        const orderPayload = {
           orderId,
           customer: customerId,
           customerName: customerName || undefined,
@@ -180,7 +248,27 @@ const createOrder = async (req, res) => {
           postalCode: finalPostal,
           pointsUsed: validatedPointsUsed,
           pointsEarned,
-        });
+        };
+
+        // attach user and branch coordinates / servingBranch when we have them
+        try {
+          const usedCoords = (currentLocation && currentLocation.latitude && currentLocation.longitude) ? currentLocation : (user.currentLocation || null);
+          if (usedCoords && usedCoords.latitude && usedCoords.longitude) {
+            orderPayload.userLocation = { latitude: usedCoords.latitude, longitude: usedCoords.longitude };
+            // find branch document for branchToUse to record its coords
+            if (branchToUse) {
+              const branchDoc = await Branch.findOne({ name: branchToUse });
+              if (branchDoc) {
+                orderPayload.branchLocation = { latitude: branchDoc.latitude || null, longitude: branchDoc.longitude || null };
+                orderPayload.servingBranch = branchDoc.name || branchToUse;
+              }
+            }
+          }
+        } catch (attachErr) {
+          console.warn('Failed to attach location metadata to order payload', attachErr);
+        }
+
+        const order = await chosenModel.create(orderPayload);
 
         // If the order is already finalized (paymentMethod is set and not 'Pending'), update user's loyalty balance now.
         if (paymentMethod && String(paymentMethod).toLowerCase() !== 'pending') {
@@ -193,7 +281,8 @@ const createOrder = async (req, res) => {
           }
         }
 
-        res.status(201).json(order);
+        // respond with created order and include servingBranch for frontend display
+        res.status(201).json({ order, servingBranch: orderPayload.servingBranch || branchToUse || '' });
         return;
       }
     } catch (errUser) {
