@@ -15,7 +15,7 @@ const Home = () => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const API_BASE = (
-    import.meta.env.VITE_API_URL || 'https://spicehut-8mqx.onrender.com'
+    'https://spicehut-8mqx.onrender.com'
   ).replace(/\/api$/, "");
 
   useEffect(() => {
