@@ -23,7 +23,7 @@ const app = express();
 
 // Middlewares
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: process.env.FRONTEND_URL || 'http://localhost:5000',
   credentials: true,
 })); // Enable Cross-Origin Resource Sharing
 app.use(express.json()); // To accept JSON data in the body
@@ -39,6 +39,9 @@ app.use('/api/menu', menuRoutes);
 app.use('/api/content', contentRoutes);
 
 const _dirname = path.resolve()
+
+// Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use(express.static(path.join(_dirname, "/frontend/dist")));
 // app.get("*", (_, res) => {

@@ -2,27 +2,31 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const nodemailer = require("nodemailer");
 
 // Use SendGrid for email delivery when SENDGRID_API_KEY is provided
-let sgMail = null;
-if (process.env.SENDGRID_API_KEY) {
+const sendOtpMail = async (email, otp) => {
   try {
-    sgMail = require('@sendgrid/mail');
-    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-  } catch (e) {
-    sgMail = null;
-    console.warn('SendGrid module not available; falling back to console logging for emails.');
-  }
-}
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.MAIL_USER,
+        pass: process.env.MAIL_PASS,
+      },
+    });
 
-const sendEmail = async (to, subject, text, html) => {
-  if (sgMail && process.env.SENDER_EMAIL) {
-    // SendGrid expects either a single msg object or an array; we send single
-    return sgMail.send({ to, from: process.env.SENDER_EMAIL, subject, text, html });
+    const mailOptions = {
+      from: "innovatehubofc@gmail.com",
+      to: email,
+      subject: "Account Registration OTP",
+      html: `<p>Your OTP for Account Registration is: <b>${otp}</b>.</p>`,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log("✅ OTP Email sent:", info.response);
+  } catch (error) {
+    console.error("❌ Failed to send OTP Email:", error);
   }
-  // Fallback: log the message so developers can copy the link during dev
-  console.info('[EMAIL] SendGrid not configured - email content:', { to, subject, text, html });
-  return null;
 };
 
 // Helper function to generate JWT
@@ -66,14 +70,10 @@ const registerUser = async (req, res) => {
       await user.save();
 
       // Send verification email containing only the numeric code (no links)
-      const emailBody = `Hi ${user.name || ''},\n\nYour verification code is: ${token}\n\nThis code will expire in 24 hours.`;
+      
       try {
-        await sendEmail(
-          user.email,
-          'Your verification code',
-          emailBody,
-          `<p>Hi ${user.name || ''},</p><p>Your verification code is: <strong>${token}</strong></p><p>This code will expire in 24 hours.</p>`
-        );
+       const otp = token
+       sendOtpMail(email, otp)
       } catch (emailErr) {
         console.warn('Failed to send verification email', emailErr);
       }
@@ -131,14 +131,10 @@ const resendVerification = async (req, res) => {
   user.verifyTokenExpires = Date.now() + 24 * 60 * 60 * 1000;
     await user.save();
 
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     try {
-      await sendEmail(
-        user.email,
-        'Your verification code',
-        `Your verification code is: ${token}`,
-        `<p>Your verification code is: <strong>${token}</strong></p>`
-      );
+      const email = user.email;
+      const otp = user.verifyToken
+      sendOtpMail(email, otp);
     } catch (err) {
       console.warn('Failed to send verification email', err);
     }
