@@ -42,6 +42,13 @@ app.use('/api/content', contentRoutes);
 app.use('/api/branches', branchRoutes);
 app.use('/api/utils', utilsRoutes);
 
+
+//short api to keep render alive
+app.get("/ping", (req, res) => {
+  res.status(200).send("OK");
+});
+
+
 const _dirname = path.resolve()
 
 // Serve static files from uploads directory
