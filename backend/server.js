@@ -52,7 +52,7 @@ app.get("/ping", (req, res) => {
 const _dirname = path.resolve()
 
 // Serve static files from uploads directory
-app.use('api/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/api/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use(express.static(path.join(_dirname, "/frontend/dist")));
 // app.get("*", (_, res) => {
