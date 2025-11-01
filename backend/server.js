@@ -42,10 +42,17 @@ app.use('/api/content', contentRoutes);
 app.use('/api/branches', branchRoutes);
 app.use('/api/utils', utilsRoutes);
 
+
+//short api to keep render alive
+app.get("/ping", (req, res) => {
+  res.status(200).send("OK");
+});
+
+
 const _dirname = path.resolve()
 
 // Serve static files from uploads directory
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/api/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use(express.static(path.join(_dirname, "/frontend/dist")));
 // app.get("*", (_, res) => {
