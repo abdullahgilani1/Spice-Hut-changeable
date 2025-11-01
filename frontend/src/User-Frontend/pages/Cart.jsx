@@ -125,7 +125,23 @@ export default function Cart() {
         total,
         paymentMethod: "Cash on Delivery",
         address: "",
+        // include currentLocation from profile if available so server can pick nearest branch
+        currentLocation: null,
+        // include orderType derived from user's selected delivery method (fallback to pickup)
+        orderType: (localStorage.getItem('deliveryMethod') === 'home' || localStorage.getItem('deliveryMethod') === 'homeDelivery') ? 'homeDelivery' : 'pickup',
       };
+
+      try {
+        const profile = await profileAPI.getProfile();
+        if (profile && profile.currentLocation && profile.currentLocation.latitude && profile.currentLocation.longitude) {
+          orderPayload.currentLocation = {
+            latitude: profile.currentLocation.latitude,
+            longitude: profile.currentLocation.longitude,
+          };
+        }
+      } catch (pfErr) {
+        // ignore
+      }
 
       const created = await orderAPI.createOrder(orderPayload);
       // created should be the order object

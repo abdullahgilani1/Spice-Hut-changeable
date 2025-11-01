@@ -140,6 +140,8 @@ export default function Checkout() {
           city: newAddress.city,
           postalCode: newAddress.postalCode,
           isDefault: false,
+          latitude: newAddress.latitude,
+          longitude: newAddress.longitude,
         });
 
         // Refresh address list from server to ensure consistency
@@ -191,6 +193,8 @@ export default function Checkout() {
           city: "",
           postalCode: "",
           instructions: "",
+          latitude: null,
+          longitude: null,
         });
         setShowAddAddress(false);
       } catch (error) {
@@ -210,6 +214,8 @@ export default function Checkout() {
           addressLine1: address.addressLine1,
           city: address.city,
           postalCode: address.postalCode,
+          latitude: address.latitude,
+          longitude: address.longitude,
         }));
       },
       (error) => {

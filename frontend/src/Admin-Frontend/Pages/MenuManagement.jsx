@@ -38,7 +38,7 @@ export default function MenuManagement() {
   const [editItem, setEditItem] = useState(null);
 
   // derive backend origin from API URL (strip trailing /api)
-  const API_BASE = 'https://spicehut-8mqx.onrender.com/api'
+  const API_BASE = 'https://spicehut-8mqx.onrender.com'
 
   const fetchItems = async () => {
     setLoading(true);

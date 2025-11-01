@@ -13,8 +13,8 @@ const branchRoutes = require('./routes/branchRoutes');
 const utilsRoutes = require('./routes/utilsRoutes');
 const cors = require('cors');
 
-// Load environment variables
-dotenv.config();
+// Load environment variables from root directory
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 // Connect to database
 connectDB();

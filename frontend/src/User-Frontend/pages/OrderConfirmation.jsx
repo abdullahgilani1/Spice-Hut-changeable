@@ -79,10 +79,9 @@ export default function OrderConfirmation() {
           const userName =
             order.customerName || (order.customer && order.customer.name) || "";
           const paymentMethod = order.paymentMethod || "Unknown";
+          // Prefer explicit orderType when present (homeDelivery vs pickup)
+          const deliveryMethod = order.orderType === 'homeDelivery' ? 'Home Delivery' : 'Pickup from Restaurant';
           const deliveryAddress = order.address || "";
-          const deliveryMethod = deliveryAddress
-            ? "Home Delivery"
-            : "Pickup from Restaurant";
           const estimatedTime =
             deliveryMethod === "Home Delivery"
               ? "30–45 minutes"
@@ -194,19 +193,16 @@ export default function OrderConfirmation() {
           price: it.price || 0,
         }));
 
-        setOrderData({
+          setOrderData({
           orderId: syntheticOrder.orderId || syntheticOrder._id,
           orderDate,
           orderTime,
           userName: syntheticOrder.customerName || "Guest",
           paymentMethod: syntheticOrder.paymentMethod || "Unknown",
           deliveryAddress: syntheticOrder.address || "",
-          deliveryMethod: syntheticOrder.address
-            ? "Home Delivery"
-            : "Pickup from Restaurant",
-          estimatedTime: syntheticOrder.address
-            ? "30–45 minutes"
-            : "Ready for pickup in 15 minutes",
+          // For local synthetic orders prefer explicit orderType if available
+          deliveryMethod: syntheticOrder.orderType === 'homeDelivery' ? 'Home Delivery' : (syntheticOrder.address ? 'Home Delivery' : 'Pickup from Restaurant'),
+          estimatedTime: (syntheticOrder.orderType === 'homeDelivery' || syntheticOrder.address) ? "30–45 minutes" : "Ready for pickup in 15 minutes",
           items: enrichedItems,
           subtotal: syntheticOrder.subtotal || 0,
           tax: syntheticOrder.tax || 0,

@@ -72,34 +72,47 @@ const reverseGeocode = (lat, lng, onSuccess, onError) => {
   const latLng = { lat, lng };
 
   geocoder.geocode({ location: latLng }, (results, status) => {
-    if (status === window.google.maps.GeocoderStatus.OK && results[0]) {
-      const addressComponents = results[0].address_components;
+    if (status === window.google.maps.GeocoderStatus.OK && results && results.length > 0) {
+      // Prefer the most specific address (usually results[0]) for street components
+      const primary = results[0];
       let streetNumber = '';
       let streetName = '';
       let city = '';
       let postalCode = '';
 
-      addressComponents.forEach((component) => {
-        const types = component.types;
-        if (types.includes('street_number')) {
-          streetNumber = component.long_name;
+      if (primary && primary.address_components) {
+        primary.address_components.forEach((component) => {
+          const types = component.types || [];
+          if (types.includes('street_number')) streetNumber = component.long_name;
+          if (types.includes('route')) streetName = component.long_name;
+          // city may not be present on the primary result; prefer locality but try others later
+          if (types.includes('locality')) city = component.long_name;
+        });
+      }
+
+      // Search across all results for city and postal_code if not found yet
+      for (const res of results) {
+        if (!res || !res.address_components) continue;
+        for (const component of res.address_components) {
+          const types = component.types || [];
+          if (!city && (types.includes('locality') || types.includes('administrative_area_level_2') || types.includes('administrative_area_level_1'))) {
+            city = component.long_name;
+          }
+          if (!postalCode && (types.includes('postal_code') || types.includes('postal_code_prefix'))) {
+            postalCode = component.long_name;
+          }
+          if (city && postalCode) break;
         }
-        if (types.includes('route')) {
-          streetName = component.long_name;
-        }
-        if (types.includes('locality') || types.includes('administrative_area_level_1')) {
-          city = component.long_name;
-        }
-        if (types.includes('postal_code')) {
-          postalCode = component.long_name;
-        }
-      });
+        if (city && postalCode) break;
+      }
 
       const addressLine1 = `${streetNumber} ${streetName}`.trim();
       onSuccess({
         addressLine1,
         city,
         postalCode,
+        latitude: lat,
+        longitude: lng,
       });
     } else {
       onError('Unable to retrieve address from location. Please enter your address manually.');

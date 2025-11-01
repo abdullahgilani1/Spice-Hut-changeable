@@ -326,6 +326,22 @@ export default function Billing() {
       }));
 
       // Include delivery address from checkout
+      // Determine coordinates to include with order so backend can pick nearest branch
+      let currentCoords = null;
+      if (passedSelectedAddress && passedSelectedAddress.latitude && passedSelectedAddress.longitude) {
+        currentCoords = { latitude: passedSelectedAddress.latitude, longitude: passedSelectedAddress.longitude };
+      } else {
+        // Try to fetch user's stored currentLocation from profile as fallback
+        try {
+          const profile = await profileAPI.getProfile();
+          if (profile && profile.currentLocation && profile.currentLocation.latitude && profile.currentLocation.longitude) {
+            currentCoords = { latitude: profile.currentLocation.latitude, longitude: profile.currentLocation.longitude };
+          }
+        } catch (pfErr) {
+          // ignore
+        }
+      }
+
       const payload = {
         customerId,
         customerName,
@@ -343,6 +359,10 @@ export default function Billing() {
         address: billingInfo.address || "",
         city: billingInfo.city || "",
         postalCode: billingInfo.postalCode || "",
+        // include coords when available so backend can select nearest branch
+        currentLocation: currentCoords,
+        // orderType: map delivery method passed from checkout to backend enum
+        orderType: (passedDeliveryMethod === 'home' || passedDeliveryMethod === 'homeDelivery') ? 'homeDelivery' : 'pickup',
       };
 
       const created = await orderAPI.createOrder(payload);

@@ -52,6 +52,8 @@ const Profile = () => {
     city: "",
     postalCode: "",
     instructions: "",
+    latitude: null,
+    longitude: null,
   });
   const [locationError, setLocationError] = useState(null);
 
@@ -292,6 +294,8 @@ const Profile = () => {
             addressLine1: geo.formattedAddress || prev.addressLine1,
             city: geo.city || prev.city,
             postalCode: geo.postalCode || prev.postalCode,
+            latitude,
+            longitude,
           }));
 
           // Persist user's current coordinates to profile so backend can use them when placing orders
@@ -349,6 +353,8 @@ const Profile = () => {
         city: newAddress.city,
         postalCode: newAddress.postalCode,
         isDefault: false,
+        latitude: newAddress.latitude,
+        longitude: newAddress.longitude,
       });
       setAddresses((prev) => [
         ...prev,
@@ -360,6 +366,8 @@ const Profile = () => {
         city: "",
         postalCode: "",
         instructions: "",
+        latitude: null,
+        longitude: null,
       });
       setLocationError(null);
       setShowAddAddress(false);

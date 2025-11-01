@@ -6,7 +6,7 @@ const branchSchema = new mongoose.Schema({
   city: { type: String, required: true },
   province: { type: String, default: '' },
   postalCode: { type: String, default: '' },
-  country: { type: String, default: 'Canada' },
+  country: { type: String, default: '' },
   phone: { type: String, default: '' },
   // Optional geolocation for the branch (latitude/longitude)
   latitude: { type: Number },

@@ -54,7 +54,7 @@ const addAddress = async (req, res) => {
   try {
     // Debug: log incoming payload to verify frontend is sending city/postalCode
     console.debug('[profileController] addAddress payload:', req.body);
-    const { label, address, city, postalCode, isDefault } = req.body;
+  const { label, address, addressLine1, city, province, postalCode, country, isDefault, latitude, longitude } = req.body;
     if (!label || !address) {
       return res.status(400).json({ message: 'Label and address are required' });
     }
@@ -82,13 +82,52 @@ const addAddress = async (req, res) => {
       return { address: parts[0] || '', city: '', postalCode: '' };
     };
 
-    // Always parse the address string to extract components
-    const parsed = tryParseAddress(address);
-    let finalAddress = parsed.address || address;
-    let finalCity = city || parsed.city || '';
-    let finalPostal = postalCode || parsed.postalCode || '';
+  // Prefer an explicit addressLine1 field; fall back to address (legacy)
+  const addrLine = (addressLine1 && addressLine1.toString().trim() !== '') ? addressLine1 : address;
+  // Always parse the address string to extract components
+  const parsed = tryParseAddress(addrLine);
+  let finalAddress = parsed.address || addrLine || '';
+  let finalCity = city || parsed.city || '';
+  let finalPostal = postalCode || parsed.postalCode || '';
+  const finalProvince = province || '';
+  const finalCountry = country || '';
 
-    const newAddress = { label, address: finalAddress, city: finalCity, postalCode: finalPostal, isDefault: isDefault || false };
+  const newAddress = { label, address: finalAddress, city: finalCity, province: finalProvince || '', country: finalCountry || '', postalCode: finalPostal, isDefault: isDefault || false };
+    if (typeof latitude !== 'undefined' && typeof longitude !== 'undefined') {
+      const lat = Number(latitude);
+      const lng = Number(longitude);
+      if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
+        newAddress.latitude = lat;
+        newAddress.longitude = lng;
+      }
+    }
+
+    // If coordinates are not provided, attempt server-side forward geocode based on the provided address (addressLine1, city, province, postalCode, country)
+    if ((typeof newAddress.latitude === 'undefined' || typeof newAddress.longitude === 'undefined' || newAddress.latitude === null || newAddress.longitude === null) && (finalAddress || finalCity || finalPostal || finalProvince || finalCountry)) {
+      try {
+        const { geocodeAddress } = require('../utils/geocode');
+        const composed = [finalAddress, finalCity, finalProvince, finalPostal, finalCountry].filter(Boolean).join(', ');
+        const geo = await geocodeAddress(composed);
+        if (geo) {
+          newAddress.latitude = geo.latitude;
+          newAddress.longitude = geo.longitude;
+          console.log("Address geocoded:", { fullAddress: composed, latitude: newAddress.latitude, longitude: newAddress.longitude });
+          // If postalCode was missing, try to pull one from formatted or raw response
+          if ((!newAddress.postalCode || newAddress.postalCode === '') && geo.postalCode) {
+            newAddress.postalCode = geo.postalCode;
+          } else if ((!newAddress.postalCode || newAddress.postalCode === '') && geo.raw && Array.isArray(geo.raw.address_components)) {
+            for (const comp of geo.raw.address_components) {
+              if (comp.types && (comp.types.includes('postal_code') || comp.types.includes('postal_code_prefix'))) {
+                newAddress.postalCode = comp.long_name;
+                break;
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('[profileController] geocodeAddress failed while adding address', e && e.message ? e.message : e);
+      }
+    }
     user.addresses.push(newAddress);
     await user.save();
     res.status(201).json({ message: 'Address added', address: newAddress });
@@ -103,7 +142,7 @@ const updateAddress = async (req, res) => {
     const { id } = req.params;
     // Debug: log incoming payload to verify frontend is sending city/postalCode
     console.debug('[profileController] updateAddress payload:', { id, body: req.body });
-    const { label, address, city, postalCode, isDefault } = req.body;
+  const { label, address, city, postalCode, isDefault, latitude, longitude, province, country } = req.body;
     const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
@@ -134,7 +173,7 @@ const updateAddress = async (req, res) => {
     };
 
     // Prepare final values, starting from existing then applying updates
-    let finalLabel = typeof label !== 'undefined' ? label : existing.label;
+  let finalLabel = typeof label !== 'undefined' ? label : existing.label;
     let finalAddress = typeof address !== 'undefined' ? address : existing.address;
     let finalCity = typeof city !== 'undefined' ? city : existing.city;
     let finalPostal = typeof postalCode !== 'undefined' ? postalCode : existing.postalCode;
@@ -148,13 +187,49 @@ const updateAddress = async (req, res) => {
       if (parsed.address && parsed.address !== '') finalAddress = parsed.address;
     }
 
+    // Build updated address object
+    let updatedLatitude = typeof latitude !== 'undefined' ? Number(latitude) : existing.latitude;
+    let updatedLongitude = typeof longitude !== 'undefined' ? Number(longitude) : existing.longitude;
+
+    // If coords are missing try server-side forward geocode using updated components (include province/country)
+  const finalProvinceForGeo = (typeof province !== 'undefined' ? province : (existing.province || '')) || '';
+  const finalCountryForGeo = (typeof country !== 'undefined' ? country : (existing.country || '')) || '';
+    if ((typeof updatedLatitude === 'undefined' || typeof updatedLongitude === 'undefined' || updatedLatitude === null || updatedLongitude === null) && (finalAddress || finalCity || finalPostal || finalProvinceForGeo || finalCountryForGeo)) {
+      try {
+        const { geocodeAddress } = require('../utils/geocode');
+        const composed = [finalAddress, finalCity, finalProvinceForGeo, finalPostal, finalCountryForGeo].filter(Boolean).join(', ');
+        const geo = await geocodeAddress(composed);
+        if (geo) {
+          updatedLatitude = geo.latitude;
+          updatedLongitude = geo.longitude;
+          console.log("Address geocoded:", { fullAddress: composed, latitude: updatedLatitude, longitude: updatedLongitude });
+          if ((!finalPostal || finalPostal === '') && geo.postalCode) {
+            finalPostal = geo.postalCode;
+          } else if ((!finalPostal || finalPostal === '') && geo.raw && Array.isArray(geo.raw.address_components)) {
+            for (const comp of geo.raw.address_components) {
+              if (comp.types && (comp.types.includes('postal_code') || comp.types.includes('postal_code_prefix'))) {
+                finalPostal = comp.long_name;
+                break;
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('[profileController] geocodeAddress failed while updating address', e && e.message ? e.message : e);
+      }
+    }
+
     user.addresses[addrIndex] = {
       ...existing,
       label: finalLabel,
       address: finalAddress,
       city: finalCity,
+      province: typeof province !== 'undefined' ? province : existing.province || '',
+      country: typeof country !== 'undefined' ? country : existing.country || '',
       postalCode: finalPostal,
-      isDefault: finalIsDefault
+      isDefault: finalIsDefault,
+      latitude: typeof updatedLatitude !== 'undefined' ? Number(updatedLatitude) : existing.latitude,
+      longitude: typeof updatedLongitude !== 'undefined' ? Number(updatedLongitude) : existing.longitude
     };
     await user.save();
     res.json({ message: 'Address updated', address: user.addresses[addrIndex] });
