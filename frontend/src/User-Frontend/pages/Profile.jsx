@@ -126,6 +126,32 @@ const Profile = () => {
           } catch (addrErr) {
             console.error("Failed to load addresses", addrErr);
           }
+
+          // Check for pending address from registration
+          const pendingAddress = localStorage.getItem("pendingAddress");
+          if (pendingAddress) {
+            try {
+              const addressData = JSON.parse(pendingAddress);
+              const fullAddress = `${addressData.addressLine1}, ${addressData.city}, ${addressData.postalCode}`;
+              await profileAPI.addAddress({
+                label: addressData.label,
+                address: fullAddress,
+                city: addressData.city,
+                postalCode: addressData.postalCode,
+                isDefault: false,
+                latitude: addressData.latitude,
+                longitude: addressData.longitude,
+              });
+              // Refresh addresses list
+              const updatedAddresses = await profileAPI.getAddresses();
+              setAddresses(updatedAddresses.map((a) => ({ ...a, id: a._id })));
+              // Remove from localStorage
+              localStorage.removeItem("pendingAddress");
+            } catch (addErr) {
+              console.error("Failed to add pending address", addErr);
+              // Keep in localStorage for retry later
+            }
+          }
         } else {
           // No server profile - treat as logged out
           setIsLoggedIn(false);
@@ -277,59 +303,70 @@ const Profile = () => {
   const handleUseCurrentLocation = () => {
     setLocationError(null);
     if (!navigator.geolocation) {
-      setLocationError('Geolocation is not supported by your browser.');
+      setLocationError("Geolocation is not supported by your browser.");
       return;
     }
 
-    navigator.geolocation.getCurrentPosition(async (pos) => {
-      try {
-        const { latitude, longitude } = pos.coords;
-        // Call server-side reverse geocode to get structured address
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
         try {
-          const geo = await utilsAPI.reverseGeocode(latitude, longitude);
-          // geo: { formattedAddress, city, province, postalCode, country, latitude, longitude }
-          // Update the newAddress fields for quick add and also update user profile with currentLocation
-          setNewAddress((prev) => ({
-            ...prev,
-            addressLine1: geo.formattedAddress || prev.addressLine1,
-            city: geo.city || prev.city,
-            postalCode: geo.postalCode || prev.postalCode,
-            latitude,
-            longitude,
-          }));
-
-          // Persist user's current coordinates to profile so backend can use them when placing orders
+          const { latitude, longitude } = pos.coords;
+          // Call server-side reverse geocode to get structured address
           try {
-            await profileAPI.updateProfile({ currentLocation: { latitude, longitude } });
-          } catch (upErr) {
-            console.warn('Failed to save currentLocation to profile', upErr);
+            const geo = await utilsAPI.reverseGeocode(latitude, longitude);
+            // geo: { formattedAddress, city, province, postalCode, country, latitude, longitude }
+            // Update the newAddress fields for quick add and also update user profile with currentLocation
+            setNewAddress((prev) => ({
+              ...prev,
+              addressLine1: geo.formattedAddress || prev.addressLine1,
+              city: geo.city || prev.city,
+              postalCode: geo.postalCode || prev.postalCode,
+              latitude,
+              longitude,
+            }));
+
+            // Persist user's current coordinates to profile so backend can use them when placing orders
+            try {
+              await profileAPI.updateProfile({
+                currentLocation: { latitude, longitude },
+              });
+            } catch (upErr) {
+              console.warn("Failed to save currentLocation to profile", upErr);
+            }
+          } catch (rgErr) {
+            console.error("Reverse geocode failed", rgErr);
+            const message =
+              rgErr?.response?.data?.message ||
+              rgErr?.message ||
+              "Unable to resolve your location to an address.";
+            setLocationError(message + " (reverse geocode)");
           }
-        } catch (rgErr) {
-          console.error('Reverse geocode failed', rgErr);
-          const message = rgErr?.response?.data?.message || rgErr?.message || 'Unable to resolve your location to an address.';
-          setLocationError(message + ' (reverse geocode)');
+        } catch (err) {
+          console.error("Geolocation handling failed", err);
+          setLocationError("Unable to read your location.");
         }
-      } catch (err) {
-        console.error('Geolocation handling failed', err);
-        setLocationError('Unable to read your location.');
-      }
-    }, (err) => {
-      let message = 'Unable to get location, please enter your address manually.';
-      switch (err.code) {
-        case err.PERMISSION_DENIED:
-          message = 'Location access denied. Please allow location access and try again.';
-          break;
-        case err.POSITION_UNAVAILABLE:
-          message = 'Location information is unavailable.';
-          break;
-        case err.TIMEOUT:
-          message = 'Location request timed out.';
-          break;
-        default:
-          break;
-      }
-      setLocationError(message);
-    }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 });
+      },
+      (err) => {
+        let message =
+          "Unable to get location, please enter your address manually.";
+        switch (err.code) {
+          case err.PERMISSION_DENIED:
+            message =
+              "Location access denied. Please allow location access and try again.";
+            break;
+          case err.POSITION_UNAVAILABLE:
+            message = "Location information is unavailable.";
+            break;
+          case err.TIMEOUT:
+            message = "Location request timed out.";
+            break;
+          default:
+            break;
+        }
+        setLocationError(message);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+    );
   };
 
   const [editingAddressId, setEditingAddressId] = useState(null);
@@ -396,20 +433,30 @@ const Profile = () => {
   };
 
   const handleSaveEditedAddress = async (id) => {
-    if (!editingAddress || !editingAddress.addressLine1 || !editingAddress.city || !editingAddress.postalCode) {
-      alert('Please fill in all required fields.');
+    if (
+      !editingAddress ||
+      !editingAddress.addressLine1 ||
+      !editingAddress.city ||
+      !editingAddress.postalCode
+    ) {
+      alert("Please fill in all required fields.");
       return;
     }
     const fullAddress = `${editingAddress.addressLine1}, ${editingAddress.city}, ${editingAddress.postalCode}`;
     try {
-      await profileAPI.updateAddress(id, { label: editingAddress.label, address: fullAddress, city: editingAddress.city, postalCode: editingAddress.postalCode });
+      await profileAPI.updateAddress(id, {
+        label: editingAddress.label,
+        address: fullAddress,
+        city: editingAddress.city,
+        postalCode: editingAddress.postalCode,
+      });
       const serverAddresses = await profileAPI.getAddresses();
       setAddresses(serverAddresses.map((a) => ({ ...a, id: a._id })));
       setEditingAddressId(null);
       setEditingAddress(null);
     } catch (err) {
-      console.error('Failed to update address', err);
-      alert('Failed to update address.');
+      console.error("Failed to update address", err);
+      alert("Failed to update address.");
     }
   };
 
@@ -674,7 +721,9 @@ const Profile = () => {
                               </div>
                             </div>
                           ) : (
-                            <p className="text-xs sm:text-sm break-words">{addr.address}</p>
+                            <p className="text-xs sm:text-sm break-words">
+                              {addr.address}
+                            </p>
                           )}
                         </div>
 
@@ -698,7 +747,9 @@ const Profile = () => {
                             <>
                               {!addr.isDefault && (
                                 <button
-                                  onClick={() => handleSetDefaultAddress(addr.id)}
+                                  onClick={() =>
+                                    handleSetDefaultAddress(addr.id)
+                                  }
                                   className="bg-orange-600 text-xs px-2 py-1 rounded hover:bg-orange-700 whitespace-nowrap"
                                 >
                                   Set Default
