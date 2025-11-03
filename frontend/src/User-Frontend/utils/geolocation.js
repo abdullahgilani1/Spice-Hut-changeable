@@ -106,7 +106,20 @@ const reverseGeocode = (lat, lng, onSuccess, onError) => {
         if (city && postalCode) break;
       }
 
-      const addressLine1 = `${streetNumber} ${streetName}`.trim();
+      // Construct an address line. If street number/route are missing, fall back
+      // to the formatted_address from the most appropriate result so callers
+      // receive a complete address (similar to server-side reverse geocode).
+      let addressLine1 = `${streetNumber} ${streetName}`.trim();
+      if (!addressLine1) {
+        // Prefer primary.formatted_address if available
+        if (primary && primary.formatted_address) {
+          addressLine1 = primary.formatted_address;
+        } else {
+          // Otherwise, try to find a result that has route or street_number
+          const fallback = results.find((r) => r && Array.isArray(r.address_components) && r.address_components.some(c => c.types && (c.types.includes('route') || c.types.includes('street_number'))));
+          if (fallback && fallback.formatted_address) addressLine1 = fallback.formatted_address;
+        }
+      }
       onSuccess({
         addressLine1,
         city,
