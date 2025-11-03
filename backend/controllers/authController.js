@@ -4,6 +4,8 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const nodemailer = require("nodemailer");
 
+const { sendOtpToPhone } = require('../utils/sms');
+
 // Use SendGrid for email delivery when SENDGRID_API_KEY is provided
 const sendOtpMail = async (email, otp) => {
   try {
@@ -69,14 +71,23 @@ const registerUser = async (req, res) => {
       user.isVerified = false;
       await user.save();
 
-      // Send verification email containing only the numeric code (no links)
-      
-      try {
-       const otp = token
-       sendOtpMail(email, otp)
-      } catch (emailErr) {
-        console.warn('Failed to send verification email', emailErr);
-      }
+        // Send verification code via requested method if provided (keep email as default)
+        try {
+          const otp = token;
+          const otpMethod = req.body.otpMethod || 'email';
+          if (otpMethod === 'sms' && user.phone) {
+            // attempt SMS send; non-fatal if it fails
+            const smsRes = await sendOtpToPhone(user.phone, otp, 'registration');
+            if (!smsRes || !smsRes.success) {
+              console.warn('[registerUser] SMS send failed, falling back to email');
+              await sendOtpMail(email, otp);
+            }
+          } else {
+            await sendOtpMail(email, otp);
+          }
+        } catch (emailErr) {
+          console.warn('Failed to send verification (email or sms)', emailErr);
+        }
 
       res.status(201).json({
         _id: user._id,
@@ -132,11 +143,27 @@ const resendVerification = async (req, res) => {
     await user.save();
 
     try {
-      const email = user.email;
-      const otp = user.verifyToken
-      sendOtpMail(email, otp);
+      const otp = user.verifyToken;
+      const { otpMethod, phone } = req.body;
+      // prefer explicit otpMethod in body, otherwise default to email
+      const method = otpMethod || 'email';
+      if (method === 'sms') {
+        const targetPhone = phone || user.phone;
+        if (targetPhone) {
+          const smsRes = await sendOtpToPhone(targetPhone, otp, 'verification');
+          if (!smsRes || !smsRes.success) {
+            console.warn('[resendVerification] SMS failed, falling back to email');
+            await sendOtpMail(user.email, otp);
+          }
+        } else {
+          // no phone provided - fall back to email
+          await sendOtpMail(user.email, otp);
+        }
+      } else {
+        await sendOtpMail(user.email, otp);
+      }
     } catch (err) {
-      console.warn('Failed to send verification email', err);
+      console.warn('Failed to send verification (email or sms)', err);
     }
 
     res.json({ success: true, message: 'Verification email sent' });

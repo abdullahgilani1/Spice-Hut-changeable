@@ -19,6 +19,7 @@ export default function Register() {
     password: "",
     confirmPassword: "",
   });
+  const [otpMethod, setOtpMethod] = useState('email');
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [passwordErrors, setPasswordErrors] = useState([]);
@@ -70,6 +71,7 @@ export default function Register() {
         email: formData.email,
         phone: formData.phone,
         password: formData.password,
+        otpMethod,
         role: "user",
       });
       // After successful registration, redirect user to verification page (prefill email)
@@ -259,6 +261,37 @@ export default function Register() {
                   />
                 </div>
               </div>
+
+                {/* OTP Method */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Preferred verification method
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="otpMethod"
+                        value="email"
+                        checked={otpMethod === 'email'}
+                        onChange={() => setOtpMethod('email')}
+                        className="form-radio"
+                      />
+                      <span className="text-sm">Email</span>
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="otpMethod"
+                        value="sms"
+                        checked={otpMethod === 'sms'}
+                        onChange={() => setOtpMethod('sms')}
+                        className="form-radio"
+                      />
+                      <span className="text-sm">SMS (to phone)</span>
+                    </label>
+                  </div>
+                </div>
 
               {/* Password Field */}
               <div>

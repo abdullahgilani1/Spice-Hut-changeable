@@ -41,6 +41,8 @@ const Profile = () => {
   const [passwordChangeLoading, setPasswordChangeLoading] = useState(false);
   const [passwordChangeError, setPasswordChangeError] = useState(null);
   const [passwordChangeSuccess, setPasswordChangeSuccess] = useState(null);
+  const [otpMethodForChange, setOtpMethodForChange] = useState('sms');
+  const [sendingChangeOtp, setSendingChangeOtp] = useState(false);
   const [passwordErrors, setPasswordErrors] = useState([]);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -1034,6 +1036,42 @@ const Profile = () => {
                           <FiEye className="h-4 w-4" />
                         )}
                       </button>
+                    </div>
+                    {/* Send verification code for password change (optional) */}
+                    <div className="mt-2">
+                      <label className="block text-xs text-gray-300 mb-1">Send verification code</label>
+                      <div className="flex items-center gap-2 mb-2">
+                        <label className="flex items-center gap-2 text-xs">
+                          <input type="radio" name="otpChange" value="sms" checked={otpMethodForChange === 'sms'} onChange={() => setOtpMethodForChange('sms')} />
+                          <span>SMS</span>
+                        </label>
+                        <label className="flex items-center gap-2 text-xs">
+                          <input type="radio" name="otpChange" value="email" checked={otpMethodForChange === 'email'} onChange={() => setOtpMethodForChange('email')} />
+                          <span>Email</span>
+                        </label>
+                      </div>
+                      <div>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            setSendingChangeOtp(true);
+                            try {
+                              const email = profile?.email;
+                              // call resendVerification to send code to preferred method
+                              await (await import("../../services/api")).authAPI.resendVerification({ email, phone: profile?.phone, otpMethod: otpMethodForChange });
+                              setPasswordChangeSuccess('Verification code sent');
+                            } catch (err) {
+                              setPasswordChangeError(err.response?.data?.message || err.message || 'Failed to send code');
+                            } finally {
+                              setSendingChangeOtp(false);
+                            }
+                          }}
+                          className="w-full bg-orange-500 text-white py-2 rounded"
+                          disabled={sendingChangeOtp}
+                        >
+                          {sendingChangeOtp ? 'Sending...' : 'Send verification code'}
+                        </button>
+                      </div>
                     </div>
                     <div className="relative">
                       <input

@@ -24,6 +24,8 @@ export default function ForgotPassword() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [passwordErrors, setPasswordErrors] = useState([]);
+  const [otpMethod, setOtpMethod] = useState('email');
+  const [sendingOtp, setSendingOtp] = useState(false);
 
   const handleVerify = async (e) => {
     e.preventDefault();
@@ -42,6 +44,21 @@ export default function ForgotPassword() {
       );
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleSendOtp = async () => {
+    if (!email) return setError('Please provide your email to send verification code');
+    setSendingOtp(true);
+    setError('');
+    setSuccess('');
+    try {
+      await authAPI.resendVerification({ email, phone, otpMethod });
+      setSuccess(`Verification code sent via ${otpMethod.toUpperCase()}.`);
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Failed to send verification code');
+    } finally {
+      setSendingOtp(false);
     }
   };
 
@@ -154,6 +171,25 @@ export default function ForgotPassword() {
                       className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
                       required
                     />
+                  </div>
+                </div>
+                {/* OTP method selection and send button */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Verification method</label>
+                  <div className="flex items-center gap-4 mb-2">
+                    <label className="flex items-center gap-2">
+                      <input type="radio" name="otpMethod" value="email" checked={otpMethod === 'email'} onChange={() => setOtpMethod('email')} />
+                      <span className="text-sm">Email</span>
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input type="radio" name="otpMethod" value="sms" checked={otpMethod === 'sms'} onChange={() => setOtpMethod('sms')} />
+                      <span className="text-sm">SMS</span>
+                    </label>
+                  </div>
+                  <div>
+                    <button type="button" onClick={handleSendOtp} disabled={sendingOtp} className="w-full bg-orange-500 text-white py-2 rounded">
+                      {sendingOtp ? 'Sending...' : 'Send verification code'}
+                    </button>
                   </div>
                 </div>
                 <button
