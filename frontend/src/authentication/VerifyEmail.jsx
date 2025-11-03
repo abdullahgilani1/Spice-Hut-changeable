@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import OtpModal from './authentication/components/OtpModal';
+import OtpModal from './components/OtpModal';
 
 export default function VerifyEmail() {
   const location = useLocation();
