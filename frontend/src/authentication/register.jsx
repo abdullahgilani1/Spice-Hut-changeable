@@ -8,6 +8,7 @@ import { authAPI } from "../services/api";
 import PasswordInput from "../User-Frontend/components/PasswordInput";
 import { validatePassword } from "../User-Frontend/utils/passwordUtils";
 import { getCurrentLocation } from "../User-Frontend/utils/geolocation";
+import OtpModal from './components/OtpModal';
 
 export default function Register() {
   const navigate = useNavigate();
@@ -20,6 +21,10 @@ export default function Register() {
     confirmPassword: "",
   });
   const [otpMethod, setOtpMethod] = useState('email');
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [modalEmail, setModalEmail] = useState('');
+  const [modalPhone, setModalPhone] = useState('');
+  const [modalOtpMethod, setModalOtpMethod] = useState('email');
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [passwordErrors, setPasswordErrors] = useState([]);
@@ -74,8 +79,11 @@ export default function Register() {
         otpMethod,
         role: "user",
       });
-      // After successful registration, redirect user to verification page (prefill email)
-      navigate(`/verify-email?email=${encodeURIComponent(formData.email)}`);
+  // After successful registration, open the inline OTP modal so user can verify immediately
+  setModalEmail(formData.email);
+  setModalPhone(formData.phone);
+  setModalOtpMethod(otpMethod);
+  setShowOtpModal(true);
     } catch (err) {
       setError(
         err.response?.data?.message || err.message || "Failed to register"
@@ -489,6 +497,19 @@ export default function Register() {
               )}
             </div>
           </form>
+          {showOtpModal && (
+            <OtpModal
+              email={modalEmail}
+              phone={modalPhone}
+              otpMethod={modalOtpMethod}
+              onClose={() => setShowOtpModal(false)}
+              onVerified={() => {
+                setShowOtpModal(false);
+                // after verification redirect to login
+                navigate('/login');
+              }}
+            />
+          )}
         </div>
       </div>
     </div>
