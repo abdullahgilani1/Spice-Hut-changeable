@@ -40,7 +40,7 @@ import axios from 'axios';
 // Create axios instance with base configuration
 const api = axios.create({
   // For local development, always use localhost:5000
-  baseURL: 'https://spicehut-8mqx.onrender.com/api',
+  baseURL: 'http://localhost:5000/api',
   // Alternatively, use an environment variable if you need to switch between environments:
   // baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
   timeout: 10000,

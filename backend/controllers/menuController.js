@@ -17,18 +17,14 @@ const searchMenu = async (req, res) => {
 
     // Search categories with partial matching
     const categories = await Category.find({
-      $or: [
-        { name: { $regex: searchRegex } },
-        { description: { $regex: searchRegex } }
-      ]
+      name: { $regex: searchRegex }
     }).sort({ name: 1 });
 
     // Search menu items with partial matching
     const items = await MenuItem.find({
       $or: [
         { name: { $regex: searchRegex } },
-        { category: { $regex: searchRegex } },
-        { description: { $regex: searchRegex } }
+        { category: { $regex: searchRegex } }
       ]
     }).sort({ name: 1 });
 

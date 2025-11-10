@@ -1,22 +1,23 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { categoryAPI, menuAPI } from "../../services/api";
+import { useCart } from "../context.cart";
 
 const Menu = () => {
   const navigate = useNavigate();
+  const { addToCart } = useCart();
   const [categories, setCategories] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState(null);
   const [isSearching, setIsSearching] = useState(false);
+  const [itemQuantities, setItemQuantities] = useState({});
 
   useEffect(() => {
     (async () => {
       try {
         const cats = await categoryAPI.getCategories();
         if (Array.isArray(cats) && cats.length) {
-          const API_BASE = (
-            'https://spicehut-8mqx.onrender.com/api'
-          )
+          const API_BASE = "http://localhost:5000/api";
           // map to the same shape as static menuCategories where possible
           const mapped = cats.map((c) => {
             let img = c.image || "/home.jpg";
@@ -67,6 +68,14 @@ const Menu = () => {
     setSearchResults(null);
   };
 
+  // Handle quantity changes for items
+  const handleQuantityChange = (itemId, delta) => {
+    setItemQuantities((prev) => ({
+      ...prev,
+      [itemId]: Math.max(1, (prev[itemId] || 1) + delta),
+    }));
+  };
+
   // Determine what to display
   const displayCategories = searchResults
     ? searchResults.categories
@@ -75,9 +84,7 @@ const Menu = () => {
 
   // Helper to get item image
   const getItemImage = (item) => {
-    const API_BASE = (
-      'https://spicehut-8mqx.onrender.com/api'
-    )
+    const API_BASE = "http://localhost:5000/api";
     if (item.image && item.image.startsWith("/uploads")) {
       return `${API_BASE}${item.image}`;
     }
@@ -155,7 +162,7 @@ const Menu = () => {
                       )}
                       <div className="flex-1 flex flex-col justify-end w-full">
                         <button className="mx-auto w-full sm:w-3/4 block bg-[#4B0B0B] text-white text-base sm:text-lg px-4 sm:px-6 py-2 rounded hover:bg-[#FFB366] hover:text-black transition-all">
-                          Explore Menu
+                          View Category
                         </button>
                       </div>
                     </div>
@@ -196,8 +203,38 @@ const Menu = () => {
                         </p>
                       )}
                       <div className="flex-1 flex flex-col justify-end w-full">
-                        <button className="mx-auto w-3/4 block bg-[#4B0B0B] text-white text-lg px-6 py-2 rounded hover:bg-[#FFB366] hover:text-black transition-all">
-                          View Category
+                        {/* Quantity Selector */}
+                        <div className="flex items-center justify-center mb-4">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleQuantityChange(item._id, -1);
+                            }}
+                            className="bg-[#4B0B0B] text-white font-bold px-3 py-1 rounded-l hover:bg-[#FFB366] hover:text-black transition-all"
+                          >
+                            -
+                          </button>
+                          <span className="text-white px-4 py-1 font-bold">
+                            {itemQuantities[item._id] || 1}
+                          </span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleQuantityChange(item._id, 1);
+                            }}
+                            className="bg-[#4B0B0B] text-white font-bold px-3 py-1 rounded-r hover:bg-[#FFB366] hover:text-black transition-all"
+                          >
+                            +
+                          </button>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            addToCart(item, itemQuantities[item._id] || 1);
+                          }}
+                          className="mx-auto w-3/4 block bg-[#4B0B0B] text-white text-lg px-6 py-2 rounded hover:bg-[#FFB366] hover:text-black transition-all"
+                        >
+                          Add to Cart
                         </button>
                       </div>
                     </div>

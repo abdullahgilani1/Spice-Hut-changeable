@@ -17,8 +17,8 @@ const CategoryPage = () => {
     useState(decodedCategory);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const API_BASE = (
-    'https://spicehut-8mqx.onrender.com/api')
+  const [itemQuantities, setItemQuantities] = useState({});
+  const API_BASE = "https://spicehut-8mqx.onrender.com/api";
 
   useEffect(() => {
     (async () => {
@@ -87,6 +87,14 @@ const CategoryPage = () => {
     // Site-level placeholder
     return "/home.jpg";
   }
+
+  // Handle quantity changes for items
+  const handleQuantityChange = (itemId, delta) => {
+    setItemQuantities((prev) => ({
+      ...prev,
+      [itemId]: Math.max(1, (prev[itemId] || 1) + delta),
+    }));
+  };
 
   // Resolve image string from DB or static fallback
   function resolveImageString(img, dishName, categoryName) {
@@ -162,18 +170,45 @@ const CategoryPage = () => {
                 </p>
               )}
               <div className="flex-1 flex flex-col justify-end w-full">
+                {/* Quantity Selector */}
+                <div className="flex items-center justify-center mb-4">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleQuantityChange(dish._id, -1);
+                    }}
+                    className="bg-[#4B0B0B] text-white font-bold px-3 py-1 rounded-l hover:bg-[#FFB366] hover:text-black transition-all"
+                  >
+                    -
+                  </button>
+                  <span className="text-white px-4 py-1 font-bold">
+                    {itemQuantities[dish._id] || 1}
+                  </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleQuantityChange(dish._id, 1);
+                    }}
+                    className="bg-[#4B0B0B] text-white font-bold px-3 py-1 rounded-r hover:bg-[#FFB366] hover:text-black transition-all"
+                  >
+                    +
+                  </button>
+                </div>
                 <button
                   className="mx-auto w-3/4 block bg-[#4B0B0B] text-white text-lg px-6 py-2 rounded hover:bg-[#FFB366] hover:text-black transition-all"
                   onClick={() =>
-                    addToCart({
-                      name: dish.name,
-                      price: dish.price,
-                      category: decodedCategory,
-                      tags: dish.subCategory
-                        ? dish.subCategory.split(",").map((tag) => tag.trim())
-                        : [],
-                      description: dish.description,
-                    })
+                    addToCart(
+                      {
+                        name: dish.name,
+                        price: dish.price,
+                        category: decodedCategory,
+                        tags: dish.subCategory
+                          ? dish.subCategory.split(",").map((tag) => tag.trim())
+                          : [],
+                        description: dish.description,
+                      },
+                      itemQuantities[dish._id] || 1
+                    )
                   }
                 >
                   Add to Cart

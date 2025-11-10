@@ -63,7 +63,7 @@ export function CartProvider({ children }) {
   };
 
   // Add item to cart
-  const addToCart = (dish) => {
+  const addToCart = (dish, quantity = 1) => {
     setCartItems((prev) => {
       const existing = prev.find(
         (item) => item.name === dish.name && item.category === dish.category
@@ -71,11 +71,11 @@ export function CartProvider({ children }) {
       if (existing) {
         return prev.map((item) =>
           item.name === dish.name && item.category === dish.category
-            ? { ...item, quantity: item.quantity + 1 }
+            ? { ...item, quantity: existing.quantity + quantity }
             : item
         );
       }
-      return [...prev, { ...dish, quantity: 1 }];
+      return [...prev, { ...dish, quantity }];
     });
     // show a small confirmation when item added
     showToast(`${dish.name} added to cart`);

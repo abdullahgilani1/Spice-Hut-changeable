@@ -2,10 +2,10 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { FiMail, FiLock, FiUser, FiAlertCircle } from "react-icons/fi";
 // background image moved to public/media to avoid bundling large images
-const loginImg = '/media/login.jpg';
+const loginImg = "/media/login.jpg";
 import { useAuth } from "../contexts/AuthContext";
 import PasswordInput from "../User-Frontend/components/PasswordInput";
-import { authAPI } from '../services/api';
+import { authAPI } from "../services/api";
 
 // removed unused imports: jwtDecode, authAPI (AuthContext provides login)
 
@@ -44,14 +44,19 @@ export default function Login() {
   };
 
   const handleResend = async () => {
-    if (!email) return setResendMessage('Please enter your email above to resend verification.');
+    if (!email)
+      return setResendMessage(
+        "Please enter your email above to resend verification."
+      );
     setResendLoading(true);
-    setResendMessage('');
+    setResendMessage("");
     try {
       await authAPI.resendVerification({ email });
-      setResendMessage('Verification code sent. Check your email.');
+      setResendMessage("Verification code sent. Check your email.");
     } catch (err) {
-      setResendMessage(err.response?.data?.message || err.message || 'Failed to resend');
+      setResendMessage(
+        err.response?.data?.message || err.message || "Failed to resend"
+      );
     } finally {
       setResendLoading(false);
     }
@@ -170,9 +175,11 @@ export default function Login() {
                 disabled={resendLoading}
                 className="text-sm text-orange-600 hover:text-orange-500"
               >
-                {resendLoading ? 'Sending...' : 'Resend verification code'}
+                {resendLoading ? "Sending..." : "Resend verification code"}
               </button>
-              {resendMessage && <div className="text-xs text-white mt-2">{resendMessage}</div>}
+              {resendMessage && (
+                <div className="text-xs text-white mt-2">{resendMessage}</div>
+              )}
             </div>
 
             <div className="mt-6 text-center">
