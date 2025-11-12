@@ -39,7 +39,10 @@ import axios from 'axios';
 
 // Create axios instance with base configuration
 const api = axios.create({
+  // For local development, always use localhost:5000
   baseURL: 'http://localhost:5000/api',
+  // Alternatively, use an environment variable if you need to switch between environments:
+  // baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -179,6 +182,12 @@ export const categoryAPI = {
   },
   createCategoryMultipart: async (formData) => {
     return api.post('/menu/categories', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
+  updateCategory: async (id, categoryData) => {
+    return api.put(`/menu/categories/${id}`, categoryData);
+  },
+  updateCategoryMultipart: async (id, formData) => {
+    return api.put(`/menu/categories/${id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
   },
   deleteCategory: async (id) => {
     return api.delete(`/menu/categories/${id}`);
