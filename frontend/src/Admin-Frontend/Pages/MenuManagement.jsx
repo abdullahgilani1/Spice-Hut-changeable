@@ -55,7 +55,7 @@ export default function MenuManagement() {
   const [openStatusDropdown, setOpenStatusDropdown] = useState(null);
 
   // derive backend origin from API URL (strip trailing /api)
-  const API_BASE = "http://localhost:5000";
+  const API_BASE = "https://spicehut-8mqx.onrender.com";
 
   const fetchItems = async () => {
     setLoading(true);
