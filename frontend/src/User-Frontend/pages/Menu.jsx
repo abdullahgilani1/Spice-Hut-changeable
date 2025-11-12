@@ -22,7 +22,7 @@ const Menu = () => {
       try {
         const cats = await categoryAPI.getCategories();
         if (Array.isArray(cats) && cats.length) {
-          const API_BASE = "https://spicehut-8mqx.onrender.com/api";
+          const API_BASE = "http://localhost:5000/api";
           // map to the same shape as static menuCategories where possible
           const mapped = cats.map((c) => {
             let img = c.image || "/home.jpg";
@@ -99,7 +99,7 @@ const Menu = () => {
 
   // Helper to get item image
   const getItemImage = (item) => {
-    const API_BASE = "https://spicehut-8mqx.onrender.com/api";
+    const API_BASE = "http://localhost:5000/api";
     if (item.image && item.image.startsWith("/uploads")) {
       return `${API_BASE}${item.image}`;
     }
