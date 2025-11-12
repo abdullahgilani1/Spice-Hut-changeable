@@ -3,6 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { categoryAPI, menuAPI } from "../../services/api";
 import { useCart } from "../context.cart";
 
+const tagColors = {
+  GF: "bg-green-600",
+  LF: "bg-blue-600",
+};
+
 const Menu = () => {
   const navigate = useNavigate();
   const { addToCart } = useCart();
@@ -24,7 +29,14 @@ const Menu = () => {
             // If image is stored as an uploads path like '/uploads/...' prepend API base so browser can load it
             if (typeof img === "string" && img.startsWith("/uploads"))
               img = `${API_BASE}${img}`;
-            return { name: c.name, image: img, desc: c.description || "" };
+            return {
+              name: c.name,
+              image: img,
+              desc: c.description || "",
+              slug: c.slug,
+              subCategory: c.subCategory || "",
+              _id: c._id,
+            };
           });
           setCategories(mapped);
         }
@@ -152,9 +164,27 @@ const Menu = () => {
                         alt={cat.name}
                         className="rounded-2xl mb-3 sm:mb-4 object-cover w-full h-40 sm:h-48 md:h-56"
                       />
-                      <h3 className="font-bold text-xl sm:text-2xl mb-2 text-white text-center">
-                        {cat.name}
-                      </h3>
+                      <div className="w-full">
+                        <h3 className="font-bold text-xl sm:text-2xl mb-2 text-white text-center">
+                          {cat.name}
+                        </h3>
+                        {cat.subCategory && (
+                          <div className="flex gap-1 mb-2 justify-center">
+                            {cat.subCategory
+                              .split(",")
+                              .map((tag) => tag.trim())
+                              .filter((tag) => tagColors[tag])
+                              .map((tag) => (
+                                <span
+                                  key={tag}
+                                  className={`text-xs text-white px-2 py-1 rounded font-medium ${tagColors[tag]}`}
+                                >
+                                  {tag}
+                                </span>
+                              ))}
+                          </div>
+                        )}
+                      </div>
                       {cat.description && (
                         <p className="text-sm sm:text-base mb-3 sm:mb-4 text-white/80 font-normal text-center">
                           {cat.description}
@@ -259,7 +289,9 @@ const Menu = () => {
                 key={cat.name}
                 className="bg-black bg-opacity-70 rounded-2xl p-4 sm:p-6 md:p-8 w-full mx-auto flex flex-col items-center justify-between cursor-pointer transform transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-lg"
                 onClick={() =>
-                  navigate(`/user/menu/${encodeURIComponent(cat.name)}`)
+                  navigate(
+                    `/user/menu/${encodeURIComponent(cat.slug || cat.name)}`
+                  )
                 }
               >
                 <img
@@ -267,9 +299,27 @@ const Menu = () => {
                   alt={cat.name}
                   className="rounded-2xl mb-3 sm:mb-4 object-cover w-full h-40 sm:h-48 md:h-56"
                 />
-                <h3 className="font-bold text-xl sm:text-2xl mb-2 text-white text-center">
-                  {cat.name}
-                </h3>
+                <div className="w-full">
+                  <h3 className="font-bold text-xl sm:text-2xl mb-2 text-white text-center">
+                    {cat.name}
+                  </h3>
+                  {cat.subCategory && (
+                    <div className="flex gap-1 mb-2 justify-center">
+                      {cat.subCategory
+                        .split(",")
+                        .map((tag) => tag.trim())
+                        .filter((tag) => tagColors[tag])
+                        .map((tag) => (
+                          <span
+                            key={tag}
+                            className={`text-xs text-white px-2 py-1 rounded font-medium ${tagColors[tag]}`}
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                    </div>
+                  )}
+                </div>
                 {cat.desc && (
                   <p className="text-sm sm:text-base mb-3 sm:mb-4 text-white/80 font-normal text-center">
                     {cat.desc}

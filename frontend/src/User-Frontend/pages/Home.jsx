@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaUtensils, FaTruck, FaStar } from "react-icons/fa";
 // large image moved to public/media to avoid bundling
-const butterChickenImg = '/media/butter-chicken.jpg';
+const butterChickenImg = "/media/butter-chicken.jpg";
 import kormaImg from "../../assets/Korma @ Spice Hut. .jpg";
 import tandooriImg from "../../assets/Tandoori Chicken Tikka .jpg";
 import biryaniImg from "../../assets/Biryani.jpg";
@@ -10,13 +10,16 @@ import vegetableImg from "../../assets/Aalo Gobi (Cauliflower).jpg";
 import naanImg from "../../assets/Qeema Naan.jpg";
 import { categoryAPI } from "../../services/api";
 
+const tagColors = {
+  GF: "bg-green-600",
+  LF: "bg-blue-600",
+};
+
 const Home = () => {
   const navigate = useNavigate();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const API_BASE = (
-    'https://spicehut-8mqx.onrender.com/api'
-  )
+  const API_BASE = "http://localhost:5000/api";
 
   useEffect(() => {
     (async () => {
@@ -29,6 +32,8 @@ const Home = () => {
               image: c.image,
               slug: c.slug,
               description: c.description,
+              subCategory: c.subCategory || "",
+              _id: c._id,
             }))
           );
       } catch (err) {
@@ -150,7 +155,27 @@ const Home = () => {
                       alt={title}
                       className="rounded-2xl mb-4 object-contain w-full h-56"
                     />
-                    <h3 className="font-bold text-2xl mb-2">{title}</h3>
+                    <div className="w-full">
+                      <h3 className="font-bold text-2xl mb-2 text-white text-center">
+                        {title}
+                      </h3>
+                      {cat.subCategory && (
+                        <div className="flex gap-1 mb-2 justify-center">
+                          {cat.subCategory
+                            .split(",")
+                            .map((tag) => tag.trim())
+                            .filter((tag) => tagColors[tag])
+                            .map((tag) => (
+                              <span
+                                key={tag}
+                                className={`text-xs text-white px-2 py-1 rounded font-medium ${tagColors[tag]}`}
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                        </div>
+                      )}
+                    </div>
                     {cat.description && (
                       <p className="text-sm text-white/80 font-normal text-center mb-4">
                         {cat.description}

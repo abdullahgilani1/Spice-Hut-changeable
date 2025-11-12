@@ -5,6 +5,7 @@ const categorySchema = new mongoose.Schema({
   description: { type: String, default: '' },
   image: { type: String, default: '' },
   slug: { type: String, default: '' },
+  subCategory: { type: String, default: '' },
   items: [{ type: mongoose.Schema.Types.ObjectId, ref: 'MenuItem' }],
 }, { timestamps: true });
 

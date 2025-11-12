@@ -1,6 +1,16 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { FiHome, FiUsers, FiShoppingCart, FiSettings, FiUser, FiLogOut, FiX, FiBarChart, FiMapPin } from "react-icons/fi";
+import {
+  FiHome,
+  FiUsers,
+  FiShoppingCart,
+  FiSettings,
+  FiUser,
+  FiLogOut,
+  FiX,
+  FiBarChart,
+  FiMapPin,
+} from "react-icons/fi";
 import { useAuth } from "../../contexts/AuthContext";
 import LogoutButton from "../../components/LogoutButton";
 
@@ -23,8 +33,8 @@ export default function Sidebar({ collapsed, open, setOpen }) {
 
   useEffect(() => {
     const handleResize = () => setIsDesktop(window.innerWidth >= 768);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   // Mobile: overlay sidebar
@@ -35,9 +45,7 @@ export default function Sidebar({ collapsed, open, setOpen }) {
         className="fixed inset-0 bg-transparent bg-opacity-70 z-90"
         onClick={() => setOpen(false)}
       />
-      <aside
-        className="fixed top-0 left-0 h-full w-64 bg-gradient-to-b from-orange-400 to-orange-600 text-white flex flex-col justify-between z-100 shadow-lg transition-transform duration-300"
-      >
+      <aside className="fixed top-0 left-0 h-full w-64 bg-gradient-to-b from-orange-400 to-orange-600 text-white flex flex-col justify-between z-100 shadow-lg transition-transform duration-300">
         <div>
           <div className="flex items-center justify-between p-4 border-b border-blue-800">
             <span className="text-2xl font-bold tracking-wide">Admin</span>
@@ -51,7 +59,7 @@ export default function Sidebar({ collapsed, open, setOpen }) {
           </div>
           <nav className="p-4">
             <ul className="space-y-2">
-              {links.map(link => (
+              {links.map((link) => (
                 <li key={link.to}>
                   <Link
                     to={link.to}
@@ -71,7 +79,10 @@ export default function Sidebar({ collapsed, open, setOpen }) {
           </nav>
         </div>
         <div className="p-4 border-t border-blue-800 flex flex-col gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-black transition-colors" onClick={() => navigate("/admin/profile")}> 
+          <button
+            className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-black transition-colors"
+            onClick={() => navigate("/admin/profile")}
+          >
             <FiUser size={20} />
             Profile
           </button>
@@ -90,16 +101,24 @@ export default function Sidebar({ collapsed, open, setOpen }) {
       style={{ minWidth: collapsed ? "4rem" : "16rem" }}
     >
       <div>
-        <div className={`flex items-center justify-between p-4 border-b border-white ${collapsed ? "justify-center" : ""}`}>
-          {!collapsed && <span className="text-2xl font-bold tracking-wide">Admin</span>}
+        <div
+          className={`flex items-center justify-between p-4 border-b border-white ${
+            collapsed ? "justify-center" : ""
+          }`}
+        >
+          {!collapsed && (
+            <span className="text-2xl font-bold tracking-wide">Admin</span>
+          )}
         </div>
         <nav className="p-4">
           <ul className="space-y-2">
-            {links.map(link => (
+            {links.map((link) => (
               <li key={link.to}>
                 <Link
                   to={link.to}
-                  className={`flex items-center gap-3 px-2 py-2 rounded-lg transition-all justify-center ${collapsed ? "" : "justify-start"} ${
+                  className={`flex items-center gap-3 px-2 py-2 rounded-lg transition-all justify-center ${
+                    collapsed ? "" : "justify-start"
+                  } ${
                     location.pathname === link.to
                       ? "bg-blue-600 shadow font-semibold"
                       : "hover:bg-blue-500 hover:shadow"
@@ -117,11 +136,18 @@ export default function Sidebar({ collapsed, open, setOpen }) {
       <div className="p-4 border-t border-white flex flex-col gap-3 items-center">
         {!collapsed && (
           <div className="w-full text-center mb-2">
-            <p className="text-sm font-medium">{user?.firstName} {user?.lastName}</p>
-            <p className="text-xs opacity-75">{user?.adminProfile?.adminRole}</p>
+            <p className="text-sm font-medium">
+              {user?.firstName} {user?.lastName}
+            </p>
+            <p className="text-xs opacity-75">
+              {user?.adminProfile?.adminRole}
+            </p>
           </div>
         )}
-        <button className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-black transition-colors justify-center" onClick={() => navigate("/admin/profile")}>
+        <button
+          className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-black transition-colors justify-center"
+          onClick={() => navigate("/admin/profile")}
+        >
           <FiUser size={20} />
           {!collapsed && <span>Profile</span>}
         </button>

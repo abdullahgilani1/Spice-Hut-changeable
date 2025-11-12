@@ -31,6 +31,12 @@ const subCategoryOptions = [
   { value: "LF,GF", label: "LF, GF – Both" },
 ];
 
+// Color mapping for subcategories (matches user frontend)
+const tagColors = {
+  GF: "bg-green-600",
+  LF: "bg-blue-600",
+};
+
 export default function MenuManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -368,9 +374,26 @@ export default function MenuManagement() {
                     </div>
                   </div>
                   <div className="p-4">
-                    <h3 className="font-semibold text-gray-900 text-lg mb-2">
-                      {category.name}
-                    </h3>
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-semibold text-gray-900 text-lg">
+                        {category.name}
+                      </h3>
+                      <div className="flex gap-1">
+                        {category.subCategory &&
+                          category.subCategory
+                            .split(",")
+                            .map((tag) => tag.trim())
+                            .filter((tag) => tagColors[tag])
+                            .map((tag) => (
+                              <span
+                                key={tag}
+                                className={`text-xs text-white px-2 py-1 rounded font-medium ${tagColors[tag]}`}
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                      </div>
+                    </div>
                     {category.description && (
                       <p className="text-sm text-gray-600 mb-2">
                         {category.description}
@@ -814,52 +837,95 @@ export default function MenuManagement() {
                 const slug = e.target.slug?.value || "";
                 const subCategory = e.target.subCategory?.value || "";
                 const fileInput = e.target.imageFile;
+                const hasNewFile =
+                  fileInput && fileInput.files && fileInput.files[0];
+
                 if (!name) return alert("Category name is required");
-                if (!fileInput || !fileInput.files || !fileInput.files[0])
+
+                // For adding: require an image
+                // For editing: image is optional (can keep existing)
+                if (!editCategory && !hasNewFile) {
                   return alert("Please choose an image file");
+                }
+
                 try {
-                  const fd = new FormData();
-                  fd.append("name", name);
-                  fd.append("description", description);
-                  fd.append("slug", slug);
-                  fd.append("subCategory", subCategory);
-                  fd.append("imageFile", fileInput.files[0]);
-                  const created = await categoryAPI.createCategoryMultipart(fd);
-                  if (created && created.name) {
-                    setCategories((prev) => {
-                      const exists = prev.find(
-                        (c) =>
-                          (c._id && c._id === created._id) ||
-                          (c.name &&
-                            c.name.toLowerCase() === created.name.toLowerCase())
+                  let result;
+
+                  if (editCategory) {
+                    // Editing existing category
+                    if (hasNewFile) {
+                      // User provided a new image, use multipart
+                      const fd = new FormData();
+                      fd.append("name", name);
+                      fd.append("description", description);
+                      fd.append("slug", slug);
+                      fd.append("subCategory", subCategory);
+                      fd.append("imageFile", fileInput.files[0]);
+                      result = await categoryAPI.updateCategoryMultipart(
+                        editCategory._id,
+                        fd
                       );
-                      if (exists) return prev;
-                      const head =
-                        prev.length && prev[0] && prev[0].name === "All"
-                          ? [prev[0]]
-                          : [];
-                      return [
-                        ...head,
+                    } else {
+                      // No new image, update without file
+                      result = await categoryAPI.updateCategory(
+                        editCategory._id,
                         {
-                          _id: created._id,
-                          name: created.name,
-                          description: created.description,
-                          image: created.image || "",
-                          slug: created.slug || "",
-                          subCategory: created.subCategory || "",
-                        },
-                        ...prev.slice(head.length),
-                      ];
-                    });
-                    setSelectedCategory(created.name);
+                          name,
+                          description,
+                          slug,
+                          subCategory,
+                        }
+                      );
+                    }
+                  } else {
+                    // Creating new category (file is required)
+                    const fd = new FormData();
+                    fd.append("name", name);
+                    fd.append("description", description);
+                    fd.append("slug", slug);
+                    fd.append("subCategory", subCategory);
+                    fd.append("imageFile", fileInput.files[0]);
+                    result = await categoryAPI.createCategoryMultipart(fd);
+                    if (result && result.name) {
+                      setCategories((prev) => {
+                        const exists = prev.find(
+                          (c) =>
+                            (c._id && c._id === result._id) ||
+                            (c.name &&
+                              c.name.toLowerCase() ===
+                                result.name.toLowerCase())
+                        );
+                        if (exists) return prev;
+                        const head =
+                          prev.length && prev[0] && prev[0].name === "All"
+                            ? [prev[0]]
+                            : [];
+                        return [
+                          ...head,
+                          {
+                            _id: result._id,
+                            name: result.name,
+                            description: result.description,
+                            image: result.image || "",
+                            slug: result.slug || "",
+                            subCategory: result.subCategory || "",
+                          },
+                          ...prev.slice(head.length),
+                        ];
+                      });
+                      setSelectedCategory(result.name);
+                    }
                   }
+
                   setShowAddCategoryModal(false);
+                  setEditCategory(null);
+                  setPreview("");
                   fetchCategories();
                 } catch (err) {
                   const msg =
                     err?.response?.data?.message ||
                     err?.message ||
-                    "Failed to create category";
+                    "Failed to save category";
                   alert(msg);
                 }
               }}
@@ -947,19 +1013,11 @@ export default function MenuManagement() {
                 <input
                   name="slug"
                   type="text"
+                  defaultValue={editCategory ? editCategory.slug : ""}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl"
                   placeholder="e.g., butter-dishes"
                 />
               </div>
-              {preview && (
-                <div className="mt-3">
-                  <img
-                    src={preview}
-                    className="w-32 h-32 object-cover rounded"
-                    alt="preview"
-                  />
-                </div>
-              )}
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"

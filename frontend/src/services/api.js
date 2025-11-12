@@ -183,6 +183,12 @@ export const categoryAPI = {
   createCategoryMultipart: async (formData) => {
     return api.post('/menu/categories', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
   },
+  updateCategory: async (id, categoryData) => {
+    return api.put(`/menu/categories/${id}`, categoryData);
+  },
+  updateCategoryMultipart: async (id, formData) => {
+    return api.put(`/menu/categories/${id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
   deleteCategory: async (id) => {
     return api.delete(`/menu/categories/${id}`);
   }

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { searchMenu, getMenuItems, getMenuByCategory, createMenuItem, updateMenuItem, deleteMenuItem } = require('../controllers/menuController');
-const { getCategories, createCategory, deleteCategory } = require('../controllers/categoryController');
+const { getCategories, createCategory, updateCategory, deleteCategory } = require('../controllers/categoryController');
 const { protect, adminOnly } = require('../middleware/authMiddleware');
 const multer = require('multer');
 const path = require('path');
@@ -47,6 +47,7 @@ router.delete('/:id', protect, adminOnly, deleteMenuItem);
 // Categories management (admin only for create/delete)
 // allow image upload for category using the same multer upload middleware
 router.post('/categories', protect, adminOnly, upload.single('imageFile'), createCategory);
+router.put('/categories/:id', protect, adminOnly, upload.single('imageFile'), updateCategory);
 router.delete('/categories/:id', protect, adminOnly, deleteCategory);
 
 module.exports = router;
