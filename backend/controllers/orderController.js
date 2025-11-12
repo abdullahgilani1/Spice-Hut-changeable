@@ -53,6 +53,20 @@ async function findNearestBranchByCoords(lat, lng) {
   return branches[minIndex] || null;
 }
 
+// List of client branch locations (as provided). Keep in sync with client list.
+const BRANCHES = [
+  'Campbell River',
+  'Cannoore',
+  'Comox',
+  'Cranbrook',
+  'Fort Saskatchewan',
+  'Invermere',
+  'Lady Smith',
+  'Lloydminster',
+  'Port Alberni',
+  'Tofino'
+];
+
 const normalizeLocation = (loc) => {
   if (!loc) return '';
   return loc.toString().trim().replace(/[^a-zA-Z0-9]+/g, ' ').split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('');
@@ -80,25 +94,18 @@ const normalizeAddrForCompare = (s) => {
   return s.toString().trim().toLowerCase().replace(/[.,#\-]/g, '').replace(/\s+/g, ' ');
 };
 
-// return array of models (default + branch-specific) by reading branch cities from DB
-const getAllOrderModels = async () => {
+// return array of models (default + branch-specific)
+const getAllOrderModels = () => {
   const models = [DefaultOrder];
-  try {
-    const cities = await Branch.distinct('city');
-    if (Array.isArray(cities)) {
-      for (const c of cities) {
-        if (c && c.toString().trim() !== '') models.push(getOrderModel(c));
-      }
-    }
-  } catch (e) {
-    console.warn('[orderController] failed to load branch cities for order models', e && e.message ? e.message : e);
+  for (const b of BRANCHES) {
+    models.push(getOrderModel(b));
   }
   return models;
 };
 
 // Find an order by _id across all collections; returns { order, model } or { order: null }
 const findOrderAcrossCollectionsById = async (id) => {
-  const models = await getAllOrderModels();
+  const models = getAllOrderModels();
   for (const m of models) {
     try {
       const found = await m.findById(id);
@@ -112,7 +119,7 @@ const findOrderAcrossCollectionsById = async (id) => {
 
 // Find an order by orderId across all collections; returns { order, model }
 const findOrderAcrossCollectionsByOrderId = async (orderId) => {
-  const models = await getAllOrderModels();
+  const models = getAllOrderModels();
   for (const m of models) {
     try {
       const found = await m.findOne({ orderId });
@@ -140,8 +147,8 @@ const generateOrderId = async () => {
 // Create a new order (public / from frontend)
 const createOrder = async (req, res) => {
   try {
-      // Accept optional explicit city/postalCode and orderType from client to avoid lossy parsing
-      const { customerId, customerName, items, total, paymentMethod, address, city: providedCity, postalCode: providedPostal, pointsUsed = 0, location, currentLocation, orderType } = req.body;
+    // Accept optional explicit city/postalCode from client to avoid lossy parsing
+    const { customerId, customerName, items, total, paymentMethod, address, city: providedCity, postalCode: providedPostal, pointsUsed = 0, location, currentLocation } = req.body;
 
     if (!customerId || !items || typeof total === 'undefined') {
       return res.status(400).json({ message: 'Missing required order fields' });
@@ -212,21 +219,16 @@ const createOrder = async (req, res) => {
           }
         }
 
-        // If still not determined, try to infer branch from finalCity by matching against branch cities in DB.
+        // If still not determined, try to infer branch from finalCity.
         if (!branchToUse) {
           const cityNorm = (finalCity || '').toString().trim().toLowerCase();
           if (cityNorm) {
-            try {
-              const branchCities = await Branch.distinct('city');
-              for (const b of branchCities || []) {
-                const bNorm = (b || '').toString().trim().toLowerCase();
-                if (bNorm && (cityNorm === bNorm || cityNorm.includes(bNorm) || bNorm.includes(cityNorm))) {
-                  branchToUse = b;
-                  break;
-                }
+            for (const b of BRANCHES) {
+              const bNorm = b.toString().trim().toLowerCase();
+              if (cityNorm === bNorm || cityNorm.includes(bNorm) || bNorm.includes(cityNorm)) {
+                branchToUse = b;
+                break;
               }
-            } catch (e) {
-              console.warn('[orderController] failed to load branch cities for inference', e && e.message ? e.message : e);
             }
           }
         }
@@ -246,7 +248,6 @@ const createOrder = async (req, res) => {
           postalCode: finalPostal,
           pointsUsed: validatedPointsUsed,
           pointsEarned,
-          orderType: orderType === 'homeDelivery' ? 'homeDelivery' : 'pickup',
         };
 
         // attach user and branch coordinates / servingBranch when we have them
@@ -267,10 +268,10 @@ const createOrder = async (req, res) => {
           console.warn('Failed to attach location metadata to order payload', attachErr);
         }
 
-  const order = await chosenModel.create(orderPayload);
+        const order = await chosenModel.create(orderPayload);
 
-  // If the order is already finalized (paymentMethod is set and not 'Pending'), update user's loyalty balance now.
-  if (paymentMethod && String(paymentMethod).toLowerCase() !== 'pending') {
+        // If the order is already finalized (paymentMethod is set and not 'Pending'), update user's loyalty balance now.
+        if (paymentMethod && String(paymentMethod).toLowerCase() !== 'pending') {
           try {
             user.loyaltyPoints = Math.max(0, (user.loyaltyPoints || 0) - validatedPointsUsed);
             user.loyaltyPoints = (user.loyaltyPoints || 0) + pointsEarned;
@@ -280,8 +281,8 @@ const createOrder = async (req, res) => {
           }
         }
 
-        // respond with created order (order document already includes servingBranch)
-        res.status(201).json(order);
+        // respond with created order and include servingBranch for frontend display
+        res.status(201).json({ order, servingBranch: orderPayload.servingBranch || branchToUse || '' });
         return;
       }
     } catch (errUser) {
@@ -305,17 +306,12 @@ const createOrder = async (req, res) => {
     if (!location) {
       const cityNormFb = (finalCityFallback || '').toString().trim().toLowerCase();
       if (cityNormFb) {
-        try {
-          const branchCitiesFb = await Branch.distinct('city');
-          for (const b of branchCitiesFb || []) {
-            const bNorm = (b || '').toString().trim().toLowerCase();
-            if (bNorm && (cityNormFb === bNorm || cityNormFb.includes(bNorm) || bNorm.includes(cityNormFb))) {
-              chosenModel = getOrderModel(b);
-              break;
-            }
+        for (const b of BRANCHES) {
+          const bNorm = b.toString().trim().toLowerCase();
+          if (cityNormFb === bNorm || cityNormFb.includes(bNorm) || bNorm.includes(cityNormFb)) {
+            chosenModel = getOrderModel(b);
+            break;
           }
-        } catch (e) {
-          console.warn('[orderController] failed to load branch cities for fallback inference', e && e.message ? e.message : e);
         }
       }
     } else {
@@ -334,7 +330,6 @@ const createOrder = async (req, res) => {
       postalCode: finalPostalFallback,
       pointsUsed: 0,
       pointsEarned: pointsEarnedFallback,
-      orderType: orderType === 'homeDelivery' ? 'homeDelivery' : 'pickup',
     });
 
     res.status(201).json(order);
@@ -347,7 +342,7 @@ const createOrder = async (req, res) => {
 const getOrders = async (req, res) => {
   try {
     // Aggregate orders from all branch collections + default collection
-  const models = await getAllOrderModels();
+    const models = getAllOrderModels();
     const results = [];
     for (const m of models) {
       try {
@@ -377,7 +372,7 @@ const getOrders = async (req, res) => {
 const getUserOrders = async (req, res) => {
   try {
     if (!req.user || !req.user._id) return res.status(401).json({ message: 'Not authorized' });
-  const models = await getAllOrderModels();
+    const models = getAllOrderModels();
     const results = [];
     for (const m of models) {
       try {
@@ -397,14 +392,7 @@ const getUserOrders = async (req, res) => {
 // Get single order by id
 const getOrderById = async (req, res) => {
   try {
-    // Try to find by Mongo _id first
-    let result = await findOrderAcrossCollectionsById(req.params.id);
-    let order = result.order;
-    // If not found by _id, try searching by orderId
-    if (!order) {
-      const r2 = await findOrderAcrossCollectionsByOrderId(req.params.id);
-      order = r2.order;
-    }
+    const { order } = await findOrderAcrossCollectionsById(req.params.id);
     if (!order) return res.status(404).json({ message: 'Order not found' });
     // populate customer info if not already
     await order.populate('customer', 'name email phone');

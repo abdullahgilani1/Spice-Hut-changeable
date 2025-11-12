@@ -41,8 +41,6 @@ const Profile = () => {
   const [passwordChangeLoading, setPasswordChangeLoading] = useState(false);
   const [passwordChangeError, setPasswordChangeError] = useState(null);
   const [passwordChangeSuccess, setPasswordChangeSuccess] = useState(null);
-  const [otpMethodForChange, setOtpMethodForChange] = useState('sms');
-  const [sendingChangeOtp, setSendingChangeOtp] = useState(false);
   const [passwordErrors, setPasswordErrors] = useState([]);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -54,8 +52,6 @@ const Profile = () => {
     city: "",
     postalCode: "",
     instructions: "",
-    latitude: null,
-    longitude: null,
   });
   const [locationError, setLocationError] = useState(null);
 
@@ -127,32 +123,6 @@ const Profile = () => {
             );
           } catch (addrErr) {
             console.error("Failed to load addresses", addrErr);
-          }
-
-          // Check for pending address from registration
-          const pendingAddress = localStorage.getItem("pendingAddress");
-          if (pendingAddress) {
-            try {
-              const addressData = JSON.parse(pendingAddress);
-              const fullAddress = `${addressData.addressLine1}, ${addressData.city}, ${addressData.postalCode}`;
-              await profileAPI.addAddress({
-                label: addressData.label,
-                address: fullAddress,
-                city: addressData.city,
-                postalCode: addressData.postalCode,
-                isDefault: false,
-                latitude: addressData.latitude,
-                longitude: addressData.longitude,
-              });
-              // Refresh addresses list
-              const updatedAddresses = await profileAPI.getAddresses();
-              setAddresses(updatedAddresses.map((a) => ({ ...a, id: a._id })));
-              // Remove from localStorage
-              localStorage.removeItem("pendingAddress");
-            } catch (addErr) {
-              console.error("Failed to add pending address", addErr);
-              // Keep in localStorage for retry later
-            }
           }
         } else {
           // No server profile - treat as logged out
@@ -305,70 +275,57 @@ const Profile = () => {
   const handleUseCurrentLocation = () => {
     setLocationError(null);
     if (!navigator.geolocation) {
-      setLocationError("Geolocation is not supported by your browser.");
+      setLocationError('Geolocation is not supported by your browser.');
       return;
     }
 
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      try {
+        const { latitude, longitude } = pos.coords;
+        // Call server-side reverse geocode to get structured address
         try {
-          const { latitude, longitude } = pos.coords;
-          // Call server-side reverse geocode to get structured address
-          try {
-            const geo = await utilsAPI.reverseGeocode(latitude, longitude);
-            // geo: { formattedAddress, city, province, postalCode, country, latitude, longitude }
-            // Update the newAddress fields for quick add and also update user profile with currentLocation
-            setNewAddress((prev) => ({
-              ...prev,
-              addressLine1: geo.formattedAddress || prev.addressLine1,
-              city: geo.city || prev.city,
-              postalCode: geo.postalCode || prev.postalCode,
-              latitude,
-              longitude,
-            }));
+          const geo = await utilsAPI.reverseGeocode(latitude, longitude);
+          // geo: { formattedAddress, city, province, postalCode, country, latitude, longitude }
+          // Update the newAddress fields for quick add and also update user profile with currentLocation
+          setNewAddress((prev) => ({
+            ...prev,
+            addressLine1: geo.formattedAddress || prev.addressLine1,
+            city: geo.city || prev.city,
+            postalCode: geo.postalCode || prev.postalCode,
+          }));
 
-            // Persist user's current coordinates to profile so backend can use them when placing orders
-            try {
-              await profileAPI.updateProfile({
-                currentLocation: { latitude, longitude },
-              });
-            } catch (upErr) {
-              console.warn("Failed to save currentLocation to profile", upErr);
-            }
-          } catch (rgErr) {
-            console.error("Reverse geocode failed", rgErr);
-            const message =
-              rgErr?.response?.data?.message ||
-              rgErr?.message ||
-              "Unable to resolve your location to an address.";
-            setLocationError(message + " (reverse geocode)");
+          // Persist user's current coordinates to profile so backend can use them when placing orders
+          try {
+            await profileAPI.updateProfile({ currentLocation: { latitude, longitude } });
+          } catch (upErr) {
+            console.warn('Failed to save currentLocation to profile', upErr);
           }
-        } catch (err) {
-          console.error("Geolocation handling failed", err);
-          setLocationError("Unable to read your location.");
+        } catch (rgErr) {
+          console.error('Reverse geocode failed', rgErr);
+          const message = rgErr?.response?.data?.message || rgErr?.message || 'Unable to resolve your location to an address.';
+          setLocationError(message + ' (reverse geocode)');
         }
-      },
-      (err) => {
-        let message =
-          "Unable to get location, please enter your address manually.";
-        switch (err.code) {
-          case err.PERMISSION_DENIED:
-            message =
-              "Location access denied. Please allow location access and try again.";
-            break;
-          case err.POSITION_UNAVAILABLE:
-            message = "Location information is unavailable.";
-            break;
-          case err.TIMEOUT:
-            message = "Location request timed out.";
-            break;
-          default:
-            break;
-        }
-        setLocationError(message);
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
-    );
+      } catch (err) {
+        console.error('Geolocation handling failed', err);
+        setLocationError('Unable to read your location.');
+      }
+    }, (err) => {
+      let message = 'Unable to get location, please enter your address manually.';
+      switch (err.code) {
+        case err.PERMISSION_DENIED:
+          message = 'Location access denied. Please allow location access and try again.';
+          break;
+        case err.POSITION_UNAVAILABLE:
+          message = 'Location information is unavailable.';
+          break;
+        case err.TIMEOUT:
+          message = 'Location request timed out.';
+          break;
+        default:
+          break;
+      }
+      setLocationError(message);
+    }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 });
   };
 
   const [editingAddressId, setEditingAddressId] = useState(null);
@@ -392,8 +349,6 @@ const Profile = () => {
         city: newAddress.city,
         postalCode: newAddress.postalCode,
         isDefault: false,
-        latitude: newAddress.latitude,
-        longitude: newAddress.longitude,
       });
       setAddresses((prev) => [
         ...prev,
@@ -405,8 +360,6 @@ const Profile = () => {
         city: "",
         postalCode: "",
         instructions: "",
-        latitude: null,
-        longitude: null,
       });
       setLocationError(null);
       setShowAddAddress(false);
@@ -435,30 +388,20 @@ const Profile = () => {
   };
 
   const handleSaveEditedAddress = async (id) => {
-    if (
-      !editingAddress ||
-      !editingAddress.addressLine1 ||
-      !editingAddress.city ||
-      !editingAddress.postalCode
-    ) {
-      alert("Please fill in all required fields.");
+    if (!editingAddress || !editingAddress.addressLine1 || !editingAddress.city || !editingAddress.postalCode) {
+      alert('Please fill in all required fields.');
       return;
     }
     const fullAddress = `${editingAddress.addressLine1}, ${editingAddress.city}, ${editingAddress.postalCode}`;
     try {
-      await profileAPI.updateAddress(id, {
-        label: editingAddress.label,
-        address: fullAddress,
-        city: editingAddress.city,
-        postalCode: editingAddress.postalCode,
-      });
+      await profileAPI.updateAddress(id, { label: editingAddress.label, address: fullAddress, city: editingAddress.city, postalCode: editingAddress.postalCode });
       const serverAddresses = await profileAPI.getAddresses();
       setAddresses(serverAddresses.map((a) => ({ ...a, id: a._id })));
       setEditingAddressId(null);
       setEditingAddress(null);
     } catch (err) {
-      console.error("Failed to update address", err);
-      alert("Failed to update address.");
+      console.error('Failed to update address', err);
+      alert('Failed to update address.');
     }
   };
 
@@ -723,9 +666,7 @@ const Profile = () => {
                               </div>
                             </div>
                           ) : (
-                            <p className="text-xs sm:text-sm break-words">
-                              {addr.address}
-                            </p>
+                            <p className="text-xs sm:text-sm break-words">{addr.address}</p>
                           )}
                         </div>
 
@@ -749,9 +690,7 @@ const Profile = () => {
                             <>
                               {!addr.isDefault && (
                                 <button
-                                  onClick={() =>
-                                    handleSetDefaultAddress(addr.id)
-                                  }
+                                  onClick={() => handleSetDefaultAddress(addr.id)}
                                   className="bg-orange-600 text-xs px-2 py-1 rounded hover:bg-orange-700 whitespace-nowrap"
                                 >
                                   Set Default
@@ -1036,42 +975,6 @@ const Profile = () => {
                           <FiEye className="h-4 w-4" />
                         )}
                       </button>
-                    </div>
-                    {/* Send verification code for password change (optional) */}
-                    <div className="mt-2">
-                      <label className="block text-xs text-gray-300 mb-1">Send verification code</label>
-                      <div className="flex items-center gap-2 mb-2">
-                        <label className="flex items-center gap-2 text-xs">
-                          <input type="radio" name="otpChange" value="sms" checked={otpMethodForChange === 'sms'} onChange={() => setOtpMethodForChange('sms')} />
-                          <span>SMS</span>
-                        </label>
-                        <label className="flex items-center gap-2 text-xs">
-                          <input type="radio" name="otpChange" value="email" checked={otpMethodForChange === 'email'} onChange={() => setOtpMethodForChange('email')} />
-                          <span>Email</span>
-                        </label>
-                      </div>
-                      <div>
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            setSendingChangeOtp(true);
-                            try {
-                              const email = profile?.email;
-                              // call resendVerification to send code to preferred method
-                              await (await import("../../services/api")).authAPI.resendVerification({ email, phone: profile?.phone, otpMethod: otpMethodForChange });
-                              setPasswordChangeSuccess('Verification code sent');
-                            } catch (err) {
-                              setPasswordChangeError(err.response?.data?.message || err.message || 'Failed to send code');
-                            } finally {
-                              setSendingChangeOtp(false);
-                            }
-                          }}
-                          className="w-full bg-orange-500 text-white py-2 rounded"
-                          disabled={sendingChangeOtp}
-                        >
-                          {sendingChangeOtp ? 'Sending...' : 'Send verification code'}
-                        </button>
-                      </div>
                     </div>
                     <div className="relative">
                       <input

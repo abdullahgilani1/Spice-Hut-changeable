@@ -38,8 +38,6 @@ const orderSchema = new mongoose.Schema({
   },
   // Name of the branch that will serve this order (e.g., 'Comox')
   servingBranch: { type: String, default: '' },
-  // Order type: homeDelivery or pickup
-  orderType: { type: String, enum: ['homeDelivery', 'pickup'], required: true, default: 'pickup' },
 }, { timestamps: true });
 
 // Cache created models in mongoose.models (Mongoose handles this) so repeated calls
