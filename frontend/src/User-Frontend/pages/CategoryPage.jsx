@@ -128,94 +128,103 @@ const CategoryPage = () => {
           {resolvedCategoryName}
         </h1>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 max-w-6xl mx-auto">
-          {items.length === 0 && !loading && (
-            <div className="col-span-full text-center text-white">
-              No menu items found for this category.
-            </div>
-          )}
-          {items.map((dish) => (
-            <div
-              key={dish.name}
-              className="bg-black bg-opacity-70 rounded-2xl p-8 w-full max-w-[480px] min-h-[520px] mx-auto flex flex-col items-center justify-between cursor-pointer transform transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-lg"
-            >
-              <img
-                src={resolveImageString(dish.image, dish.name, decodedCategory)}
-                alt={dish.name}
-                className="rounded-2xl mb-4 object-contain w-full h-56"
-              />
-              <h3 className="font-bold text-2xl mb-2 text-white text-center">
-                {dish.name}
-              </h3>
-              <span className="text-[#FFB366] font-bold text-lg mb-2">
-                ${dish.price.toFixed(2)}
-              </span>
-              <div className="flex gap-2 mb-2">
-                {dish.subCategory &&
-                  dish.subCategory
-                    .split(",")
-                    .map((tag) => tag.trim())
-                    .filter((tag) => tagColors[tag])
-                    .map((tag) => (
-                      <span
-                        key={tag}
-                        className={`text-xs text-white px-2 py-1 rounded ${tagColors[tag]}`}
-                      >
-                        {tag}
-                      </span>
-                    ))}
+          {items.filter((item) => item.status === "Available").length === 0 &&
+            !loading && (
+              <div className="col-span-full text-center text-white">
+                No menu items found for this category.
               </div>
-              {dish.description && (
-                <p className="text-base mb-4 text-white/80 font-normal text-center">
-                  {dish.description}
-                </p>
-              )}
-              <div className="flex-1 flex flex-col justify-end w-full">
-                {/* Quantity Selector */}
-                <div className="flex items-center justify-center mb-4">
+            )}
+          {items
+            .filter((item) => item.status === "Available")
+            .map((dish) => (
+              <div
+                key={dish.name}
+                className="bg-black bg-opacity-70 rounded-2xl p-8 w-full max-w-[480px] min-h-[520px] mx-auto flex flex-col items-center justify-between cursor-pointer transform transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-lg"
+              >
+                <img
+                  src={resolveImageString(
+                    dish.image,
+                    dish.name,
+                    decodedCategory
+                  )}
+                  alt={dish.name}
+                  className="rounded-2xl mb-4 object-contain w-full h-56"
+                />
+                <h3 className="font-bold text-2xl mb-2 text-white text-center">
+                  {dish.name}
+                </h3>
+                <span className="text-[#FFB366] font-bold text-lg mb-2">
+                  ${dish.price.toFixed(2)}
+                </span>
+                <div className="flex gap-2 mb-2">
+                  {dish.subCategory &&
+                    dish.subCategory
+                      .split(",")
+                      .map((tag) => tag.trim())
+                      .filter((tag) => tagColors[tag])
+                      .map((tag) => (
+                        <span
+                          key={tag}
+                          className={`text-xs text-white px-2 py-1 rounded ${tagColors[tag]}`}
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                </div>
+                {dish.description && (
+                  <p className="text-base mb-4 text-white/80 font-normal text-center">
+                    {dish.description}
+                  </p>
+                )}
+                <div className="flex-1 flex flex-col justify-end w-full">
+                  {/* Quantity Selector */}
+                  <div className="flex items-center justify-center mb-4">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleQuantityChange(dish._id, -1);
+                      }}
+                      className="bg-[#4B0B0B] text-white font-bold px-3 py-1 rounded-l hover:bg-[#FFB366] hover:text-black transition-all"
+                    >
+                      -
+                    </button>
+                    <span className="text-white px-4 py-1 font-bold">
+                      {itemQuantities[dish._id] || 1}
+                    </span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleQuantityChange(dish._id, 1);
+                      }}
+                      className="bg-[#4B0B0B] text-white font-bold px-3 py-1 rounded-r hover:bg-[#FFB366] hover:text-black transition-all"
+                    >
+                      +
+                    </button>
+                  </div>
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleQuantityChange(dish._id, -1);
-                    }}
-                    className="bg-[#4B0B0B] text-white font-bold px-3 py-1 rounded-l hover:bg-[#FFB366] hover:text-black transition-all"
+                    className="mx-auto w-3/4 block bg-[#4B0B0B] text-white text-lg px-6 py-2 rounded hover:bg-[#FFB366] hover:text-black transition-all"
+                    onClick={() =>
+                      addToCart(
+                        {
+                          name: dish.name,
+                          price: dish.price,
+                          category: decodedCategory,
+                          tags: dish.subCategory
+                            ? dish.subCategory
+                                .split(",")
+                                .map((tag) => tag.trim())
+                            : [],
+                          description: dish.description,
+                        },
+                        itemQuantities[dish._id] || 1
+                      )
+                    }
                   >
-                    -
-                  </button>
-                  <span className="text-white px-4 py-1 font-bold">
-                    {itemQuantities[dish._id] || 1}
-                  </span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleQuantityChange(dish._id, 1);
-                    }}
-                    className="bg-[#4B0B0B] text-white font-bold px-3 py-1 rounded-r hover:bg-[#FFB366] hover:text-black transition-all"
-                  >
-                    +
+                    Add to Cart
                   </button>
                 </div>
-                <button
-                  className="mx-auto w-3/4 block bg-[#4B0B0B] text-white text-lg px-6 py-2 rounded hover:bg-[#FFB366] hover:text-black transition-all"
-                  onClick={() =>
-                    addToCart(
-                      {
-                        name: dish.name,
-                        price: dish.price,
-                        category: decodedCategory,
-                        tags: dish.subCategory
-                          ? dish.subCategory.split(",").map((tag) => tag.trim())
-                          : [],
-                        description: dish.description,
-                      },
-                      itemQuantities[dish._id] || 1
-                    )
-                  }
-                >
-                  Add to Cart
-                </button>
               </div>
-            </div>
-          ))}
+            ))}
         </div>
       </main>
     </div>

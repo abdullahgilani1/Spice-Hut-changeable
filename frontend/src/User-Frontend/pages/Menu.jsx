@@ -92,7 +92,10 @@ const Menu = () => {
   const displayCategories = searchResults
     ? searchResults.categories
     : categories;
-  const displayItems = searchResults ? searchResults.items : [];
+  // Filter items to show only "Available" status
+  const displayItems = searchResults
+    ? searchResults.items.filter((item) => item.status === "Available")
+    : [];
 
   // Helper to get item image
   const getItemImage = (item) => {

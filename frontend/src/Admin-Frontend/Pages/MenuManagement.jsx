@@ -52,6 +52,7 @@ export default function MenuManagement() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [editCategory, setEditCategory] = useState(null);
+  const [openStatusDropdown, setOpenStatusDropdown] = useState(null);
 
   // derive backend origin from API URL (strip trailing /api)
   const API_BASE = "https://spicehut-8mqx.onrender.com";
@@ -472,15 +473,56 @@ export default function MenuManagement() {
                 <div className="p-4">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="font-semibold text-gray-900">{item.name}</h3>
-                    <span
-                      className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        item.status === "Available"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
-                      }`}
-                    >
-                      {item.status}
-                    </span>
+                    <div className="relative">
+                      <button
+                        onClick={() =>
+                          setOpenStatusDropdown(
+                            openStatusDropdown === item._id ? null : item._id
+                          )
+                        }
+                        className={`px-3 py-1 text-xs font-medium rounded-full cursor-pointer transition-all hover:shadow-md ${
+                          item.status === "Available"
+                            ? "bg-green-100 text-green-800 hover:bg-green-200"
+                            : "bg-red-100 text-red-800 hover:bg-red-200"
+                        }`}
+                      >
+                        {item.status}
+                      </button>
+                      {openStatusDropdown === item._id && (
+                        <div className="absolute right-0 mt-2 w-44 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
+                          <button
+                            onClick={async () => {
+                              if (item.status !== "Available") {
+                                await _toggleStatus(item);
+                              }
+                              setOpenStatusDropdown(null);
+                            }}
+                            className={`w-full text-left px-4 py-2 text-sm font-medium transition-colors ${
+                              item.status === "Available"
+                                ? "text-green-700 bg-green-50 font-semibold"
+                                : "text-gray-600 hover:bg-gray-50"
+                            }`}
+                          >
+                            ✓ Available
+                          </button>
+                          <button
+                            onClick={async () => {
+                              if (item.status !== "Out of Stock") {
+                                await _toggleStatus(item);
+                              }
+                              setOpenStatusDropdown(null);
+                            }}
+                            className={`w-full text-left px-4 py-2 text-sm font-medium border-t border-gray-200 transition-colors ${
+                              item.status === "Out of Stock"
+                                ? "text-red-700 bg-red-50 font-semibold"
+                                : "text-gray-600 hover:bg-gray-50"
+                            }`}
+                          >
+                            ✗ Unavailable
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <p className="text-sm text-gray-600 mb-2">{item.category}</p>
                   <p className="text-lg font-bold text-gray-900">
