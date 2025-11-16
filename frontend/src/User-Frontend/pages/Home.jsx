@@ -9,6 +9,7 @@ import biryaniImg from "../../assets/Biryani.jpg";
 import vegetableImg from "../../assets/Aalo Gobi (Cauliflower).jpg";
 import naanImg from "../../assets/Qeema Naan.jpg";
 import { categoryAPI } from "../../services/api";
+import { resolveImageSrc } from '../../services/image';
 
 const tagColors = {
   GF: "bg-green-600",
@@ -134,13 +135,9 @@ const Home = () => {
               return cats.map((cat, idx) => {
                 const title = cat.name || cat;
                 const key = `cat-${idx}-${title}`;
-                // prefer category.image if present
-                let img = imgMap[(title || "").toLowerCase()] || "/home.jpg";
-                if (cat.image) {
-                  img = cat.image.startsWith("/uploads")
-                    ? `${API_BASE}${cat.image}`
-                    : cat.image;
-                }
+                // prefer uploaded category.image if present, otherwise fall back to mapped images
+                const defaultImg = imgMap[(title || "").toLowerCase()] || "/home.jpg";
+                const img = cat.image ? resolveImageSrc(cat.image, defaultImg) : defaultImg;
                 const link = cat.slug
                   ? `/user/menu/${encodeURIComponent(cat.slug)}`
                   : `/user/menu/${encodeURIComponent(title)}`;

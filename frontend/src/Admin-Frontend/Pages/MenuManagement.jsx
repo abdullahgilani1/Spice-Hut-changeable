@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { FiPlus, FiEdit, FiTrash2, FiSearch, FiFilter } from "react-icons/fi";
 import { menuAPI, categoryAPI } from "../../services/api";
+import { resolveImageSrc } from '../../services/image';
 
 const defaultCategories = [
   "All",
@@ -49,13 +50,13 @@ export default function MenuManagement() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [preview, setPreview] = useState("");
+  const [previewName, setPreviewName] = useState("");
   const [showEditModal, setShowEditModal] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [editCategory, setEditCategory] = useState(null);
   const [openStatusDropdown, setOpenStatusDropdown] = useState(null);
 
-  // derive backend origin from API URL (strip trailing /api)
-  const API_BASE = "http://localhost:5000";
+  // Use shared resolver that derives server base from `api` config
 
   const fetchItems = async () => {
     setLoading(true);
@@ -79,6 +80,7 @@ export default function MenuManagement() {
           ...data.map((c) => ({
             _id: c._id,
             name: c.name,
+            image: c.image || "",
             description: c.description,
             subCategory: c.subCategory,
           })),
@@ -181,6 +183,7 @@ export default function MenuManagement() {
       }
       setShowAddModal(false);
       setPreview("");
+      setPreviewName("");
       fetchItems();
     } catch (err) {
       console.error("Failed to add item", err);
@@ -269,6 +272,7 @@ export default function MenuManagement() {
       setShowEditModal(false);
       setEditItem(null);
       setPreview("");
+      setPreviewName("");
       fetchItems();
     } catch (err) {
       console.error("Failed to update item", err);
@@ -345,11 +349,7 @@ export default function MenuManagement() {
                     onClick={() => setSelectedCategory(category.name)}
                   >
                     <img
-                      src={
-                        category.image && category.image.startsWith("/uploads")
-                          ? `${API_BASE}${category.image}`
-                          : category.image || "/default-category.jpg"
-                      }
+                      src={resolveImageSrc(category.image, "/default-category.jpg")}
                       alt={category.name}
                       className="w-full h-full object-cover"
                     />
@@ -447,11 +447,7 @@ export default function MenuManagement() {
               >
                 <div className="aspect-square bg-gray-200 relative">
                   <img
-                    src={
-                      item.image && item.image.startsWith("/uploads")
-                        ? `${API_BASE}${item.image}`
-                        : item.image
-                    }
+                    src={resolveImageSrc(item.image, "/home.jpg")}
                     alt={item.name}
                     className="w-full h-full object-cover"
                   />
@@ -647,24 +643,32 @@ export default function MenuManagement() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Or upload image
                   </label>
-                  <input
-                    name="imageFile"
-                    type="file"
-                    accept="image/*"
-                    onChange={(ev) => {
-                      const f = ev.target.files && ev.target.files[0];
-                      if (!f) {
-                        setPreview("");
-                        return;
-                      }
-                      const reader = new FileReader();
-                      reader.onload = () => {
-                        setPreview(reader.result);
-                      };
-                      reader.readAsDataURL(f);
-                    }}
-                    className="w-full"
-                  />
+                  <div className="flex items-center gap-3">
+                    <label className="inline-flex items-center gap-2 px-4 py-2 bg-[#da8516] text-white rounded-lg cursor-pointer hover:bg-[#FFB366] hover:text-black transition-colors">
+                      <input
+                        name="imageFile"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(ev) => {
+                          const f = ev.target.files && ev.target.files[0];
+                          if (!f) {
+                            setPreview("");
+                            setPreviewName("");
+                            return;
+                          }
+                          setPreviewName(f.name || "");
+                          const reader = new FileReader();
+                          reader.onload = () => {
+                            setPreview(reader.result);
+                          };
+                          reader.readAsDataURL(f);
+                        }}
+                      />
+                      Upload Image
+                    </label>
+                    <span className="text-sm text-black-200">{previewName || (preview ? 'Image selected' : 'No image selected')}</span>
+                  </div>
                   {preview && (
                     <div className="mt-3">
                       <img
@@ -785,24 +789,32 @@ export default function MenuManagement() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Or replace image
                 </label>
-                <input
-                  name="imageFile"
-                  type="file"
-                  accept="image/*"
-                  onChange={(ev) => {
-                    const f = ev.target.files && ev.target.files[0];
-                    if (!f) {
-                      setPreview(editItem.image || "");
-                      return;
-                    }
-                    const reader = new FileReader();
-                    reader.onload = () => {
-                      setPreview(reader.result);
-                    };
-                    reader.readAsDataURL(f);
-                  }}
-                  className="w-full"
-                />
+                <div className="flex items-center gap-3">
+                  <label className="inline-flex items-center gap-2 px-4 py-2 bg-[#4B0B0B] text-white rounded-lg cursor-pointer hover:bg-[#FFB366] hover:text-black transition-colors">
+                    <input
+                      name="imageFile"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(ev) => {
+                        const f = ev.target.files && ev.target.files[0];
+                        if (!f) {
+                          setPreview(editItem.image || "");
+                          setPreviewName("");
+                          return;
+                        }
+                        setPreviewName(f.name || "");
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          setPreview(reader.result);
+                        };
+                        reader.readAsDataURL(f);
+                      }}
+                    />
+                    Replace Image
+                  </label>
+                  <span className="text-sm text-gray-500">{previewName || (preview ? 'Image selected' : 'No image selected')}</span>
+                </div>
                 {preview && (
                   <div className="mt-3">
                     <img
@@ -962,6 +974,7 @@ export default function MenuManagement() {
                   setShowAddCategoryModal(false);
                   setEditCategory(null);
                   setPreview("");
+                  setPreviewName("");
                   fetchCategories();
                 } catch (err) {
                   const msg =
@@ -1019,25 +1032,33 @@ export default function MenuManagement() {
                     ? "Change Image (optional)"
                     : "Browse Image (required)"}
                 </label>
-                <input
-                  name="imageFile"
-                  type="file"
-                  accept="image/*"
-                  className="w-full"
-                  onChange={(ev) => {
-                    const f = ev.target.files && ev.target.files[0];
-                    if (!f) {
-                      setPreview(editCategory ? editCategory.image : "");
-                      return;
-                    }
-                    const reader = new FileReader();
-                    reader.onload = () => {
-                      setPreview(reader.result);
-                    };
-                    reader.readAsDataURL(f);
-                  }}
-                  required={!editCategory}
-                />
+                <div className="flex items-center gap-3">
+                  <label className="inline-flex items-center gap-2 px-4 py-2 bg-[#e2620d] text-white rounded-lg cursor-pointer hover:bg-[#FFB366] hover:text-black transition-colors">
+                    <input
+                      name="imageFile"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(ev) => {
+                        const f = ev.target.files && ev.target.files[0];
+                        if (!f) {
+                          setPreview(editCategory ? editCategory.image : "");
+                          setPreviewName("");
+                          return;
+                        }
+                        setPreviewName(f.name || "");
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          setPreview(reader.result);
+                        };
+                        reader.readAsDataURL(f);
+                      }}
+                      required={!editCategory}
+                    />
+                    {editCategory ? 'Replace Image' : 'Upload Image'}
+                  </label>
+                  <span className="text-sm text-black-200">{previewName || (preview ? 'Image selected' : 'No image selected')}</span>
+                </div>
                 {preview && (
                   <div className="mt-3">
                     <img

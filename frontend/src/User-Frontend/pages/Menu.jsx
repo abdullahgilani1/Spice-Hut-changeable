@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { categoryAPI, menuAPI } from "../../services/api";
 import { useCart } from "../context.cart";
 import { FaSearch } from 'react-icons/fa';
+import { resolveImageSrc } from '../../services/image';
 
 const tagColors = {
   GF: "bg-green-600",
@@ -23,23 +24,16 @@ const Menu = () => {
     (async () => {
       try {
         const cats = await categoryAPI.getCategories();
-        if (Array.isArray(cats) && cats.length) {
-          const API_BASE = "http://localhost:5000//api";
+          if (Array.isArray(cats) && cats.length) {
           // map to the same shape as static menuCategories where possible
-          const mapped = cats.map((c) => {
-            let img = c.image || "/home.jpg";
-            // If image is stored as an uploads path like '/uploads/...' prepend API base so browser can load it
-            if (typeof img === "string" && img.startsWith("/uploads"))
-              img = `${API_BASE}${img}`;
-            return {
-              name: c.name,
-              image: img,
-              desc: c.description || "",
-              slug: c.slug,
-              subCategory: c.subCategory || "",
-              _id: c._id,
-            };
-          });
+          const mapped = cats.map((c) => ({
+            name: c.name,
+            image: resolveImageSrc(c.image, '/home.jpg'),
+            desc: c.description || "",
+            slug: c.slug,
+            subCategory: c.subCategory || "",
+            _id: c._id,
+          }));
           setCategories(mapped);
         }
       } catch (err) {
@@ -99,13 +93,9 @@ const Menu = () => {
     ? searchResults.items.filter((item) => item.status === "Available")
     : [];
 
-  // Helper to get item image
+  // Helper to get item image using shared resolver
   const getItemImage = (item) => {
-    const API_BASE = "http://localhost:5000/api";
-    if (item.image && item.image.startsWith("/uploads")) {
-      return `${API_BASE}${item.image}`;
-    }
-    return "/home.jpg"; // fallback
+    return resolveImageSrc(item?.image, '/home.jpg');
   };
 
   return (
