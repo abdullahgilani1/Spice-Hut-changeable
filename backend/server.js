@@ -1,6 +1,10 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const path = require('path');
+
+// Load environment variables from root directory as early as possible
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
@@ -12,9 +16,6 @@ const contentRoutes = require('./routes/contentRoutes');
 const branchRoutes = require('./routes/branchRoutes');
 const utilsRoutes = require('./routes/utilsRoutes');
 const cors = require('cors');
-
-// Load environment variables from root directory
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 // Connect to database
 connectDB();

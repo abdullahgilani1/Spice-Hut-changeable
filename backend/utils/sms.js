@@ -3,9 +3,21 @@
  * this module will log a warning and resolve without throwing so it doesn't
  * break existing flows.
  */
-const twilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
-const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
-const twilioFrom = process.env.TWILIO_FROM_NUMBER;
+// Accept multiple common env var names for compatibility with different setups
+const twilioAccountSid = process.env.TWILIO_ACCOUNT_SID || process.env.TWILIO_SID;
+const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN || process.env.TWILIO_AUTH;
+const twilioFrom =
+  process.env.TWILIO_FROM_NUMBER || process.env.TWILIO_PHONE_NUMBER || process.env.TWILIO_FROM;
+
+// Debug: report presence of Twilio env values (do not log secrets)
+try {
+  const hasSid = !!twilioAccountSid;
+  const hasAuth = !!twilioAuthToken;
+  const hasFrom = !!twilioFrom;
+  console.debug(`[sms-debug] env detection - SID:${hasSid} AUTH:${hasAuth} FROM:${hasFrom}`);
+} catch (e) {
+  // ignore
+}
 
 let client = null;
 if (twilioAccountSid && twilioAuthToken) {
