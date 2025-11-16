@@ -1,7 +1,7 @@
 import api from './api';
 
-// Derive server base (e.g., http://localhost:5000) from axios baseURL (which is '.../api')
-const defaultBase = 'http://localhost:5000';
+// Derive server base  from axios baseURL (which is '.../api')
+const defaultBase = 'https://spicehut-8mqx.onrender.com';
 const base = (() => {
   try {
     const b = api.defaults && api.defaults.baseURL ? api.defaults.baseURL : defaultBase;
