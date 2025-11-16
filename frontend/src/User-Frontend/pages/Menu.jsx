@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { categoryAPI, menuAPI } from "../../services/api";
 import { useCart } from "../context.cart";
+import { FaSearch } from 'react-icons/fa';
 
 const tagColors = {
   GF: "bg-green-600",
@@ -16,6 +17,7 @@ const Menu = () => {
   const [searchResults, setSearchResults] = useState(null);
   const [isSearching, setIsSearching] = useState(false);
   const [itemQuantities, setItemQuantities] = useState({});
+  const searchInputRef = useRef(null);
 
   useEffect(() => {
     (async () => {
@@ -118,12 +120,21 @@ const Menu = () => {
 
         {/* Search Bar */}
         <div className="max-w-2xl mx-auto mb-8 relative">
+          <button
+            type="button"
+            onClick={() => searchInputRef.current?.focus()}
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+            aria-label="Focus search input"
+          >
+            <FaSearch />
+          </button>
           <input
             type="text"
             placeholder="Search categories or items..."
+            ref={searchInputRef}
             value={searchQuery}
             onChange={handleSearchChange}
-            className="w-full px-4 py-3 rounded-lg bg-white/90 text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#FFB366] text-lg"
+            className="w-full pl-10 pr-12 py-3 rounded-lg bg-white/90 text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#FFB366] text-lg"
           />
           {searchQuery && (
             <button

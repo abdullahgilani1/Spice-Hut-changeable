@@ -8,7 +8,7 @@ export default function Intro() {
   const [showButton, setShowButton] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => setShowButton(true), 2000); // show after 2 s
+    const timer = setTimeout(() => setShowButton(true), 3000); // show after 3 s
     return () => clearTimeout(timer);
   }, []);
 

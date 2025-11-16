@@ -388,12 +388,6 @@ export default function Checkout() {
                   <span className="flex items-center gap-2">
                     <FaMapMarkerAlt /> Delivery Address
                   </span>
-                  <button
-                    onClick={handleUseCurrentLocation}
-                    className="bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 flex items-center justify-center gap-2"
-                  >
-                    <FaLocationArrow /> Use Current Location
-                  </button>
                 </h3>
                 <div className="space-y-3">
                   <h4 className="font-semibold">Saved Addresses</h4>
@@ -504,6 +498,14 @@ export default function Checkout() {
                   </button>
                   {showAddAddress && (
                     <div className="bg-[#2a1f0f] p-4 rounded mt-4 space-y-3">
+                      <div className="flex justify-end">
+                        <button
+                          onClick={handleUseCurrentLocation}
+                          className="bg-orange-600 text-white px-3 py-1 rounded hover:bg-orange-700 flex items-center gap-2 text-sm"
+                        >
+                          <FaLocationArrow /> Use my current location
+                        </button>
+                      </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <input
                           type="text"

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { FiMail, FiLock, FiUser, FiAlertCircle } from "react-icons/fi";
 // background image moved to public/media to avoid bundling large images
-const loginImg = "/media/login.jpg";
+const loginImg = "/media/logo.jpg";
 import { useAuth } from "../contexts/AuthContext";
 import PasswordInput from "../User-Frontend/components/PasswordInput";
 import { authAPI } from "../services/api";

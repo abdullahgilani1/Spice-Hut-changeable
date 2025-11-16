@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { FiMail, FiLock, FiUser, FiAlertCircle } from "react-icons/fi";
 import { FaLocationArrow } from "react-icons/fa";
 // background image moved to public/media
-const loginImg = "/media/login.jpg";
+const loginImg = "/media/logo.jpg";
 import { authAPI } from "../services/api";
 import PasswordInput from "../User-Frontend/components/PasswordInput";
 import { validatePassword } from "../User-Frontend/utils/passwordUtils";

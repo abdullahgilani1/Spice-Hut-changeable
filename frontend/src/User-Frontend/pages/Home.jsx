@@ -49,9 +49,9 @@ const Home = () => {
         {/* Picture section with overlaid text */}
         <div className="relative">
           <img
-            src="/home.jpg"
+            src="/media/home.jpg"
             alt="Spice Hut"
-            className="w-full h-180 object-cover brightness-70"
+            className="w-full h-190 object-cover brightness-70"
           />
           <div className="absolute inset-0 flex items-center justify-center bg-opacity-50 text-white">
             <div className="text-center">
