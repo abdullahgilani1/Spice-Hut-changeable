@@ -55,9 +55,17 @@ const _dirname = path.resolve()
 app.use('/api/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use(express.static(path.join(_dirname, "/frontend/dist")));
-// app.get("*", (_, res) => {
-//   res.sendFile(path.resolve(_dirname, "frontend", "dist", "index.html"))
-// });
+
+// Serve React app for any non-API GET request so client-side routing works on refresh.
+// Use a RegExp route to avoid path-to-regexp parsing issues with certain string patterns.
+// This regexp matches any path that does NOT start with `/api`.
+app.get(/^(?!\/api).*/, (req, res) => {
+  // Only handle GET requests here; other methods should continue to their handlers.
+  if (req.method !== 'GET') return res.status(405).end();
+
+  // Serve the React app entrypoint so the client router can handle the path.
+  res.sendFile(path.resolve(_dirname, 'frontend', 'dist', 'index.html'));
+});
 
 const PORT = process.env.PORT || 5000;
 

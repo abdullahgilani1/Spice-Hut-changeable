@@ -258,6 +258,21 @@ const resetPassword = async (req, res) => {
 };
 
 
+/**
+ * @desc    Get current user's profile
+ * @route   GET /api/auth/profile
+ * @access  Private
+ */
+const getProfile = async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Not authorized' });
+    res.json({ success: true, data: { user: req.user } });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+
 
 module.exports = {
   registerUser,
@@ -266,4 +281,5 @@ module.exports = {
   resetPassword,
   verifyEmail,
   resendVerification,
+  getProfile,
 };

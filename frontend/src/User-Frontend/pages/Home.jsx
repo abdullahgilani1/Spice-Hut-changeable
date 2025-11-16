@@ -201,10 +201,18 @@ const Home = () => {
             experience
           </p>
           <div className="flex justify-center space-x-4">
-            <button className="border border-white px-6 py-2 rounded text-white font-semibold">
+            <button
+              onClick={() => navigate('/user/menu')}
+              className="border border-white px-6 py-2 rounded text-white font-semibold cursor-pointer hover:bg-white hover:text-black transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/50"
+              aria-label="Start Ordering - go to Menu"
+            >
               Start Ordering
             </button>
-            <button className="border border-white px-6 py-2 rounded text-white font-semibold">
+            <button
+              onClick={() => navigate('/user/menu')}
+              className="border border-white px-6 py-2 rounded text-white font-semibold cursor-pointer hover:bg-white hover:text-black transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/50"
+              aria-label="View Full Menu - go to Menu"
+            >
               View Full Menu
             </button>
           </div>
