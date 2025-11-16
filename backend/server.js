@@ -25,7 +25,7 @@ const app = express();
 
 // Middlewares
 app.use(cors({
-  origin: 'https://spicehut-8mqx.onrender.com',
+  origin: 'http://localhost:5000/' || process.env.FRONTEND_URL,
   credentials: true,
 })); // Enable Cross-Origin Resource Sharing
 app.use(express.json()); // To accept JSON data in the body
