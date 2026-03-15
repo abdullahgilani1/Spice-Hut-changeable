@@ -18,7 +18,7 @@ const CategoryPage = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [itemQuantities, setItemQuantities] = useState({});
-  const API_BASE = "https://spicehut-8mqx.onrender.com/api";
+  const API_BASE = "www.spicehutcanada.ca/api";
 
   useEffect(() => {
     (async () => {
