@@ -1,28 +1,20 @@
-import api from './api';
-
-// Derive server base  from axios baseURL (which is '.../api')
-const defaultBase = 'localhost:5000';
-const base = (() => {
-  try {
-    const b = api.defaults && api.defaults.baseURL ? api.defaults.baseURL : defaultBase;
-    return b.replace(/\/api\/?$/, '');
-  } catch (e) {
-    return defaultBase;
-  }
-})();
-
+// Resolve image source - handles Cloudinary URLs and fallbacks
 export function resolveImageSrc(img, fallback = '/default-category.jpg') {
   if (!img) return fallback;
   if (typeof img !== 'string') return fallback;
+  
   const trimmed = img.trim();
   if (!trimmed) return fallback;
-  // data URLs
+  
+  // Cloudinary URLs (https://res.cloudinary.com/...)
+  if (trimmed.startsWith('https://res.cloudinary.com')) return trimmed;
+  
+  // Data URLs
   if (trimmed.startsWith('data:')) return trimmed;
-  // server uploads stored as '/uploads/...' or 'uploads/...'
-  if (trimmed.startsWith('/uploads')) return `${base}/api${trimmed}`;
-  if (trimmed.startsWith('uploads/')) return `${base}/api/${trimmed}`;
-  // full urls
+  
+  // Full URLs
   if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
-  // unknown relative — try to resolve under api/uploads
-  return `${base}/api/${trimmed}`;
+  
+  // Fallback
+  return fallback;
 }
