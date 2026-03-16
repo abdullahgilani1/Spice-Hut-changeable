@@ -12,14 +12,14 @@ export default function Customers() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Fetch customers from backend
+  // Fetch customers from backend with pagination
   useEffect(() => {
     const fetchCustomers = async () => {
       setLoading(true);
       setError("");
       try {
-        const data = await customerAPI.getCustomers();
-        setCustomers(data);
+        const data = await customerAPI.getCustomers({ page: 1, limit: 100 });
+        setCustomers(data.customers || data);
       } catch {
         setError("Failed to load customers");
       } finally {
@@ -51,12 +51,13 @@ export default function Customers() {
   // Handler for selecting customer (for modal/details)
   const handleSelectCustomer = async (customer) => {
     setSelectedCustomer(customer);
-    // fetch all orders (admin) and filter by this customer
+    // Fetch orders for this specific customer only
     setOrdersLoading(true);
     try {
-      const allOrders = await orderAPI.getOrders();
-      // filter orders where order.customer matches the customer._id
-      const filtered = (allOrders || []).filter(o => {
+      const allOrders = await orderAPI.getOrders({ page: 1, limit: 100 });
+      const orders = allOrders.orders || allOrders;
+      // Filter orders where order.customer matches the customer._id
+      const filtered = (orders || []).filter(o => {
         if (!o) return false;
         if (o.customer && typeof o.customer === 'object') {
           return String(o.customer._id || o.customer) === String(customer._id);

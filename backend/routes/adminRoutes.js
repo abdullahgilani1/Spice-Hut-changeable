@@ -1,8 +1,11 @@
 const express = require('express');
 
-const { getAdmins, addAdmin, updateAdmin, deleteAdmin } = require('../controllers/adminController');
+const { getAdminStats, getAdmins, addAdmin, updateAdmin, deleteAdmin } = require('../controllers/adminController');
 const { protect, adminOnly } = require('../middleware/authMiddleware');
 const router = express.Router();
+
+// Stats endpoint (optimized dashboard data)
+router.get('/stats', protect, adminOnly, getAdminStats);
 
 // All admin routes are protected and admin-only
 router.get('/', protect, adminOnly, getAdmins);

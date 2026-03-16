@@ -1,10 +1,43 @@
 // Admin management controller
 const User = require('../models/User');
+const { DefaultOrder } = require('../models/Order');
+const MenuItem = require('../models/MenuItem');
 
-// List all admins
+// Get admin dashboard stats (optimized with aggregation)
+const getAdminStats = async (req, res) => {
+  try {
+    // Use aggregation for efficient counting
+    const [orderStats, customerCount, itemCount] = await Promise.all([
+      DefaultOrder.aggregate([
+        {
+          $group: {
+            _id: null,
+            totalOrders: { $sum: 1 },
+            totalRevenue: { $sum: '$total' }
+          }
+        }
+      ]),
+      User.countDocuments({ role: 'user' }),
+      MenuItem.countDocuments()
+    ]);
+
+    const stats = {
+      totalOrders: orderStats[0]?.totalOrders || 0,
+      totalRevenue: orderStats[0]?.totalRevenue || 0,
+      totalCustomers: customerCount,
+      totalItems: itemCount
+    };
+
+    res.json(stats);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// List all admins (with field projection)
 const getAdmins = async (req, res) => {
   try {
-    const admins = await User.find({ role: 'admin' }).select('-password');
+    const admins = await User.find({ role: 'admin' }).select('name email phone role createdAt').lean();
     res.json(admins);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -61,4 +94,4 @@ const deleteAdmin = async (req, res) => {
   }
 };
 
-module.exports = { getAdmins, addAdmin, updateAdmin, deleteAdmin };
+module.exports = { getAdminStats, getAdmins, addAdmin, updateAdmin, deleteAdmin };

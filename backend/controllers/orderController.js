@@ -343,52 +343,81 @@ const createOrder = async (req, res) => {
   }
 };
 
-// Get all orders (admin only)
+// Get all orders (admin only) - optimized with aggregation and pagination
 const getOrders = async (req, res) => {
   try {
-    // Aggregate orders from all branch collections + default collection
-  const models = await getAllOrderModels();
-    const results = [];
-    for (const m of models) {
-      try {
-        const rows = await m.find().populate('customer', 'name email phone').sort({ createdAt: -1 });
-        // annotate which collection (optional) by adding a _branch field using model's collection name
-        const collectionName = m.collection && m.collection.name ? m.collection.name : '';
-        for (const r of rows) {
-          // attach branch (derived from collectionName) without altering shape
-          r._branch = collectionName;
-          results.push(r);
-        }
-      } catch (err) {
-        // continue on per-collection failures
-        console.warn('Failed to read orders from collection for model', err && err.message ? err.message : err);
-      }
-    }
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const skip = (page - 1) * limit;
 
-    // sort merged results by createdAt desc
-    results.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    res.json(results);
+    // Use aggregation with $lookup to fetch customer data in single query
+    const [orders, total] = await Promise.all([
+      DefaultOrder.aggregate([
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'customer',
+            foreignField: '_id',
+            as: 'customerData'
+          }
+        },
+        {
+          $unwind: {
+            path: '$customerData',
+            preserveNullAndEmptyArrays: true
+          }
+        },
+        {
+          $project: {
+            orderId: 1,
+            customerName: 1,
+            items: 1,
+            total: 1,
+            status: 1,
+            paymentMethod: 1,
+            address: 1,
+            city: 1,
+            postalCode: 1,
+            servingBranch: 1,
+            orderType: 1,
+            createdAt: 1,
+            'customerData.name': 1,
+            'customerData.email': 1,
+            'customerData.phone': 1
+          }
+        },
+        { $sort: { createdAt: -1 } },
+        { $skip: skip },
+        { $limit: limit }
+      ]),
+      DefaultOrder.countDocuments()
+    ]);
+
+    res.json({
+      orders,
+      pagination: {
+        total,
+        page,
+        limit,
+        pages: Math.ceil(total / limit)
+      }
+    });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
-// Get current user's orders
+// Get current user's orders - optimized with aggregation
 const getUserOrders = async (req, res) => {
   try {
     if (!req.user || !req.user._id) return res.status(401).json({ message: 'Not authorized' });
-  const models = await getAllOrderModels();
-    const results = [];
-    for (const m of models) {
-      try {
-        const rows = await m.find({ customer: req.user._id }).sort({ createdAt: -1 });
-        results.push(...rows);
-      } catch (err) {
-        console.warn('Failed to query user orders from a branch collection', err);
-      }
-    }
-    results.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    res.json(results);
+    
+    const orders = await DefaultOrder.find({ customer: req.user._id })
+      .select('orderId customerName items total status paymentMethod address city postalCode servingBranch orderType createdAt')
+      .lean()
+      .sort({ createdAt: -1 });
+    
+    res.json(orders);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

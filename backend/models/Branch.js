@@ -15,6 +15,11 @@ const branchSchema = new mongoose.Schema({
   slug: { type: String, default: '' },
 }, { timestamps: true });
 
+// Add indexes for frequently queried fields
+branchSchema.index({ city: 1 });
+branchSchema.index({ slug: 1 });
+branchSchema.index({ latitude: 1, longitude: 1 });
+
 const Branch = mongoose.model('Branch', branchSchema);
 
 module.exports = Branch;

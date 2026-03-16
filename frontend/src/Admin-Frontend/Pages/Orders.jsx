@@ -17,10 +17,11 @@ export default function Orders() {
     try {
       // admin Orders page should fetch all orders (admin endpoint)
       const data = await orderAPI.getOrders();
-      const mapped = (data || []).map((o) => ({
+      const ordersList = data.orders || data || [];
+      const mapped = (ordersList || []).map((o) => ({
         id: o._id,
         orderId: o.orderId,
-        customer: o.customerName || o.customer?.name || (o.customer?.email || '').split('@')[0],
+        customer: o.customerName || o.customerData?.name || o.customer?.name || (o.customer?.email || '').split('@')[0],
         items: (o.items || []).map(i => i.name || i),
         total: o.total,
         status: o.status,

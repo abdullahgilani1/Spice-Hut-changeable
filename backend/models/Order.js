@@ -42,6 +42,12 @@ const orderSchema = new mongoose.Schema({
   orderType: { type: String, enum: ['homeDelivery', 'pickup'], required: true, default: 'pickup' },
 }, { timestamps: true });
 
+// Add indexes for frequently queried fields
+orderSchema.index({ customer: 1 });
+orderSchema.index({ status: 1 });
+orderSchema.index({ servingBranch: 1 });
+orderSchema.index({ createdAt: -1 });
+
 // Cache created models in mongoose.models (Mongoose handles this) so repeated calls
 // to getOrderModel for the same location reuse the compiled model.
 const normalizeLocation = (loc) => {

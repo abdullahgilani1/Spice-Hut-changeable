@@ -10,6 +10,11 @@ const menuItemSchema = new mongoose.Schema({
   description: { type: String, default: '' },
 }, { timestamps: true });
 
+// Add indexes for frequently queried fields
+menuItemSchema.index({ category: 1 });
+menuItemSchema.index({ status: 1 });
+menuItemSchema.index({ name: 'text' });
+
 const MenuItem = mongoose.model('MenuItem', menuItemSchema);
 
 module.exports = MenuItem;

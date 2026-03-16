@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import StatsCard from "../Components/statscard";
 import { FiShoppingCart, FiDollarSign, FiUsers, FiTrendingUp, FiPackage } from "react-icons/fi";
-import { orderAPI, menuAPI, customerAPI } from "../../services/api";
+import { orderAPI, adminAPI } from "../../services/api";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -12,23 +12,19 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const orders = await orderAPI.getOrders();
-        const items = await menuAPI.getMenuItems();
-        const customers = await customerAPI.getCustomers();
-
-        const totalOrders = orders.length;
-        const totalRevenue = orders.reduce((s, o) => s + (o.total || 0), 0);
-        const totalCustomers = customers.length;
-        const totalItems = items.length;
-
+        // Use optimized stats endpoint instead of fetching all data
+        const dashboardStats = await adminAPI.getStats();
+        
         setStats([
-          { title: 'Total Orders', value: totalOrders.toString(), icon: <FiShoppingCart />, color: 'blue' },
-          { title: 'Total Revenue', value: `$${totalRevenue.toFixed(2)}`, icon: <FiDollarSign />, color: 'green' },
-          { title: 'Total Customers', value: totalCustomers.toString(), icon: <FiUsers />, color: 'purple' },
-          { title: 'Menu Items', value: totalItems.toString(), icon: <FiPackage />, color: 'orange' },
+          { title: 'Total Orders', value: dashboardStats.totalOrders.toString(), icon: <FiShoppingCart />, color: 'blue' },
+          { title: 'Total Revenue', value: `$${dashboardStats.totalRevenue.toFixed(2)}`, icon: <FiDollarSign />, color: 'green' },
+          { title: 'Total Customers', value: dashboardStats.totalCustomers.toString(), icon: <FiUsers />, color: 'purple' },
+          { title: 'Menu Items', value: dashboardStats.totalItems.toString(), icon: <FiPackage />, color: 'orange' },
         ]);
 
-        setRecentOrders(orders.slice(0, 5));
+        // Fetch recent orders with pagination
+        const ordersData = await orderAPI.getOrders({ page: 1, limit: 5 });
+        setRecentOrders(ordersData.orders || []);
       } catch (err) {
         console.error('Failed to load dashboard stats', err);
       }

@@ -1,11 +1,32 @@
 // Customer management controller
 const User = require('../models/User');
 
-// List all customers (role: user)
+// List all customers (role: user) with pagination
 const getCustomers = async (req, res) => {
   try {
-    const customers = await User.find({ role: 'user' }).select('-password');
-    res.json(customers);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const skip = (page - 1) * limit;
+
+    const [customers, total] = await Promise.all([
+      User.find({ role: 'user' })
+        .select('name email phone loyaltyPoints createdAt')
+        .lean()
+        .skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 }),
+      User.countDocuments({ role: 'user' })
+    ]);
+
+    res.json({
+      customers,
+      pagination: {
+        total,
+        page,
+        limit,
+        pages: Math.ceil(total / limit)
+      }
+    });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

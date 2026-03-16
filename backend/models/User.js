@@ -35,6 +35,11 @@ const userSchema = new mongoose.Schema({
   verifyTokenExpires: { type: Date },
 }, { timestamps: true });
 
+// Add indexes for frequently queried fields
+userSchema.index({ role: 1 });
+userSchema.index({ email: 1 });
+userSchema.index({ phone: 1 });
+
 // Encrypt password before saving
 userSchema.pre('save', async function (next) {
   try {

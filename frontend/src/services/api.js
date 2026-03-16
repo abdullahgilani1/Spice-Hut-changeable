@@ -219,9 +219,9 @@ export const orderAPI = {
     return api.get('/orders/my');
   },
 
-  // Admin: get all orders
-  getOrders: async () => {
-    return api.get('/orders');
+  // Admin: get all orders with pagination
+  getOrders: async (params = {}) => {
+    return api.get('/orders', { params });
   },
 
   // Get order by ID
@@ -259,9 +259,9 @@ export const utilsAPI = {
 
 // Customer API (backend integration)
 export const customerAPI = {
-  // Get all customers
-  getCustomers: async () => {
-    return api.get('/customers');
+  // Get all customers with pagination
+  getCustomers: async (params = {}) => {
+    return api.get('/customers', { params });
   },
 
   // Delete a customer
@@ -273,6 +273,11 @@ export const customerAPI = {
 
 // Admin API (backend integration)
 export const adminAPI = {
+  // Get dashboard stats (optimized)
+  getStats: async () => {
+    return api.get('/admins/stats');
+  },
+
   // Get all admins
   getAdmins: async () => {
     return api.get('/admins');
