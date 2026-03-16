@@ -20,7 +20,7 @@ const Home = () => {
   const navigate = useNavigate();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const API_BASE = "www.spicehutcanada.ca/api";
+  const API_BASE = "localhost:5000/api";
 
   useEffect(() => {
     (async () => {

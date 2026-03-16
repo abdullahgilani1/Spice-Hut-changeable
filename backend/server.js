@@ -26,7 +26,7 @@ const app = express();
 
 // Middlewares
 app.use(cors({
-  origin: 'www.spicehutcanada.ca',
+  origin: 'http://localhost:5173', // Allow requests from frontend
   credentials: true,
 })); // Enable Cross-Origin Resource Sharing
 app.use(express.json()); // To accept JSON data in the body

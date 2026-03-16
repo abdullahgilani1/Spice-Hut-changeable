@@ -18,7 +18,7 @@ const CategoryPage = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [itemQuantities, setItemQuantities] = useState({});
-  const API_BASE = "www.spicehutcanada.ca/api";
+  const API_BASE = "localhost:5000/api";
 
   useEffect(() => {
     (async () => {
