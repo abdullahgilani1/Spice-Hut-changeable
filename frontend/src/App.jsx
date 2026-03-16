@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import ScrollToTop from './components/ScrollToTop';
 import Login from './authentication/login';
 import Register from './authentication/register';
 import VerifyEmail from './authentication/VerifyEmail';
@@ -45,6 +46,7 @@ function App() {
       <CartProvider>
         <ToastWrapper />
         <Router>
+          <ScrollToTop />
           <Routes>
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/login" element={<Login />} />
