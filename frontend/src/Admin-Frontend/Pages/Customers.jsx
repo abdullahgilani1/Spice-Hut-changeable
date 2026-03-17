@@ -51,20 +51,11 @@ export default function Customers() {
   // Handler for selecting customer (for modal/details)
   const handleSelectCustomer = async (customer) => {
     setSelectedCustomer(customer);
-    // Fetch orders for this specific customer only
+    // Fetch orders for this specific customer using the new endpoint
     setOrdersLoading(true);
     try {
-      const allOrders = await orderAPI.getOrders({ page: 1, limit: 100 });
-      const orders = allOrders.orders || allOrders;
-      // Filter orders where order.customer matches the customer._id
-      const filtered = (orders || []).filter(o => {
-        if (!o) return false;
-        if (o.customer && typeof o.customer === 'object') {
-          return String(o.customer._id || o.customer) === String(customer._id);
-        }
-        return String(o.customer) === String(customer._id);
-      });
-      setCustomerOrders(filtered);
+      const orders = await orderAPI.getOrdersByCustomer(customer._id);
+      setCustomerOrders(orders || []);
     } catch (err) {
       console.error('Failed to load orders for customer', err);
       setCustomerOrders([]);

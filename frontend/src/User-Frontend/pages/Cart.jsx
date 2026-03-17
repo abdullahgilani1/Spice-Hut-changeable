@@ -24,11 +24,13 @@ export default function Cart() {
     setLoyaltyPoints,
   } = useCart();
 
-  // Refresh loyalty points for the currently authenticated user on mount
+  // Refresh loyalty points only if not already loaded from context
   useEffect(() => {
     (async () => {
       const token = localStorage.getItem("token");
       if (!token) return;
+      // Only fetch if loyalty points are 0 (not yet loaded)
+      if (loyaltyPoints > 0) return;
       try {
         const profile = await profileAPI.getProfile();
         if (profile && typeof profile.loyaltyPoints !== "undefined") {
@@ -41,7 +43,7 @@ export default function Cart() {
         );
       }
     })();
-  }, [setLoyaltyPoints]);
+  }, []);
 
   const incrementQuantity = (item) => {
     updateQuantity(item.name, item.category, item.quantity + 1);

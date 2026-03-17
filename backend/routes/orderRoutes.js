@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { createOrder, getOrders, getOrderById, updateOrderStatus, getUserOrders, updateOrder } = require('../controllers/orderController');
+const { createOrder, getOrders, getOrderById, updateOrderStatus, getUserOrders, updateOrder, getOrdersByCustomer } = require('../controllers/orderController');
 const { protect, adminOnly } = require('../middleware/authMiddleware');
 
 // Public: create an order
@@ -14,6 +14,9 @@ router.get('/', protect, adminOnly, getOrders);
 
 // Get current user's orders
 router.get('/my', protect, getUserOrders);
+
+// Admin-only: get orders by customer ID
+router.get('/customer/:customerId', protect, adminOnly, getOrdersByCustomer);
 
 // Get a single order (protected)
 router.get('/:id', protect, getOrderById);

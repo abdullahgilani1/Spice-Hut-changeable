@@ -61,7 +61,12 @@ export default function Checkout() {
       const token = localStorage.getItem("token");
       if (token) {
         try {
-          const serverProfile = await profileAPI.getProfile();
+          // Fetch profile and addresses in parallel
+          const [serverProfile, serverAddresses] = await Promise.all([
+            profileAPI.getProfile().catch(() => null),
+            profileAPI.getAddresses().catch(() => [])
+          ]);
+
           if (serverProfile) {
             const mapped = {
               fullName:
@@ -73,34 +78,25 @@ export default function Checkout() {
               phone: serverProfile.phone || "",
             };
             setUserInfo((prev) => ({ ...prev, ...mapped }));
+          }
 
-            try {
-              const serverAddresses = await profileAPI.getAddresses();
-              // Always set addresses from server, even if empty
-              const mappedAddrs = Array.isArray(serverAddresses)
-                ? serverAddresses.map((a) => ({
-                    ...a,
-                    id: String(a._id),
-                  }))
-                : [];
-              setAddresses(mappedAddrs);
-              if (mappedAddrs.length) {
-                const def =
-                  mappedAddrs.find((a) => a.isDefault) || mappedAddrs[0];
-                setSelectedAddress(def.id);
-              } else {
-                setSelectedAddress(null);
-              }
-            } catch (addrErr) {
-              console.warn("Failed to load addresses from server", addrErr);
-              // Set empty addresses if server call fails
-              setAddresses([]);
-              setSelectedAddress(null);
-            }
+          // Set addresses from server
+          const mappedAddrs = Array.isArray(serverAddresses)
+            ? serverAddresses.map((a) => ({
+                ...a,
+                id: String(a._id),
+              }))
+            : [];
+          setAddresses(mappedAddrs);
+          if (mappedAddrs.length) {
+            const def =
+              mappedAddrs.find((a) => a.isDefault) || mappedAddrs[0];
+            setSelectedAddress(def.id);
+          } else {
+            setSelectedAddress(null);
           }
         } catch (err) {
-          console.warn("Failed to fetch profile from server", err);
-          // Set empty addresses if profile fetch fails
+          console.warn("Failed to load profile/addresses from server", err);
           setAddresses([]);
           setSelectedAddress(null);
         }

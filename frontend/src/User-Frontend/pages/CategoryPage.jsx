@@ -23,36 +23,20 @@ const CategoryPage = () => {
   useEffect(() => {
     (async () => {
       try {
-        // Determine whether the param is a slug; try to fetch categories and match slug
-        const cats = await categoryAPI.getCategories();
-        let match = null;
-        if (Array.isArray(cats)) {
-          match = cats.find(
-            (c) =>
-              (c.slug && c.slug === decodedCategory) ||
-              (c.name && c.name.toLowerCase() === decodedCategory.toLowerCase())
-          );
-        }
-        const finalName = match ? match.name : decodedCategory;
-        setResolvedCategoryName(finalName);
-
-        // Try to fetch menu items by category from backend
-        try {
-          const serverItems = await menuAPI.getMenuByCategory(finalName);
-          if (Array.isArray(serverItems)) {
-            setItems(serverItems);
-          } else {
-            setItems([]);
-          }
-        } catch (err) {
-          // don't fall back to static content; show empty list
-          console.warn("menuAPI.getMenuByCategory failed", err);
+        // Fetch menu items directly by category name
+        // Backend will handle category name/slug resolution
+        const serverItems = await menuAPI.getMenuByCategory(decodedCategory);
+        if (Array.isArray(serverItems)) {
+          setItems(serverItems);
+        } else {
           setItems([]);
         }
+        setResolvedCategoryName(decodedCategory);
         setLoading(false);
       } catch (err) {
-        console.error("Failed to resolve category or load items", err);
+        console.warn("Failed to load items for category", err);
         setItems([]);
+        setResolvedCategoryName(decodedCategory);
         setLoading(false);
       }
     })();

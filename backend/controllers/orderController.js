@@ -563,4 +563,37 @@ const updateOrder = async (req, res) => {
   }
 };
 
-module.exports = { createOrder, getOrders, getOrderById, updateOrderStatus, getUserOrders, updateOrder };
+// Get orders for a specific customer (admin only) - searches across all collections
+const getOrdersByCustomer = async (req, res) => {
+  try {
+    const { customerId } = req.params;
+    if (!customerId) {
+      return res.status(400).json({ message: 'Customer ID is required' });
+    }
+
+    // Get all order models (default + branch-specific)
+    const models = await getAllOrderModels();
+    
+    // Fetch orders from all collections in parallel
+    const orderPromises = models.map(model => 
+      model.find({ customer: customerId })
+        .select('orderId customerName items total status paymentMethod address city postalCode servingBranch orderType createdAt')
+        .lean()
+        .sort({ createdAt: -1 })
+        .catch(() => []) // Return empty array if collection doesn't exist or error
+    );
+
+    const orderArrays = await Promise.all(orderPromises);
+    
+    // Flatten and sort all orders by date
+    const allOrders = orderArrays
+      .flat()
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    res.json(allOrders);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+module.exports = { createOrder, getOrders, getOrderById, updateOrderStatus, getUserOrders, updateOrder, getOrdersByCustomer };

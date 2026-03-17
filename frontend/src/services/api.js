@@ -237,6 +237,11 @@ export const orderAPI = {
   updateOrder: async (id, data) => {
     return api.put(`/orders/${id}`, data);
   },
+
+  // Admin: get orders by customer ID (searches across all collections)
+  getOrdersByCustomer: async (customerId) => {
+    return api.get(`/orders/customer/${customerId}`);
+  },
 };
 
 // Content API

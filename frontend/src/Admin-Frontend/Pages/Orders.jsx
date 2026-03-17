@@ -10,13 +10,16 @@ export default function Orders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (pageNum = 1) => {
     setLoading(true);
     setError(null);
     try {
-      // admin Orders page should fetch all orders (admin endpoint)
-      const data = await orderAPI.getOrders();
+      // Fetch orders with pagination
+      const data = await orderAPI.getOrders({ page: pageNum, limit: ITEMS_PER_PAGE });
       const ordersList = data.orders || data || [];
       const mapped = (ordersList || []).map((o) => ({
         id: o._id,
@@ -31,6 +34,10 @@ export default function Orders() {
         raw: o,
       }));
       setOrders(mapped);
+      // Set total pages from pagination info if available
+      if (data.pagination) {
+        setTotalPages(Math.ceil(data.pagination.total / ITEMS_PER_PAGE));
+      }
     } catch (err) {
       setError(err.message || 'Failed to load orders');
     } finally {
@@ -39,8 +46,8 @@ export default function Orders() {
   };
 
   useEffect(() => {
-    fetchOrders();
-  }, []);
+    fetchOrders(page);
+  }, [page]);
 
   // Filter orders by search term
   const filteredOrders = (orders || []).filter(order => {
@@ -414,6 +421,41 @@ export default function Orders() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center gap-2 mt-8 mb-8">
+          <button
+            onClick={() => setPage(Math.max(1, page - 1))}
+            disabled={page === 1}
+            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Previous
+          </button>
+          <div className="flex gap-1">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+              <button
+                key={p}
+                onClick={() => setPage(p)}
+                className={`px-3 py-2 rounded-lg ${
+                  page === p
+                    ? "bg-orange-600 text-white"
+                    : "border border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => setPage(Math.min(totalPages, page + 1))}
+            disabled={page === totalPages}
+            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Next
+          </button>
         </div>
       )}
     </main>
