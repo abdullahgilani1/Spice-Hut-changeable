@@ -1,9 +1,3 @@
-/**
- * Lightweight Twilio SMS helper. Non-blocking: if Twilio env vars are missing
- * this module will log a warning and resolve without throwing so it doesn't
- * break existing flows.
- */
-// Accept multiple common env var names for compatibility with different setups
 const twilioAccountSid = process.env.TWILIO_ACCOUNT_SID || process.env.TWILIO_SID;
 const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN || process.env.TWILIO_AUTH;
 const twilioFrom =

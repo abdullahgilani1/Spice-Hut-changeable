@@ -40,7 +40,7 @@ export default function OtpModal({ email: initialEmail = '', phone = '', otpMeth
     setError('');
     setMessage('');
     try {
-      await authAPI.verifyEmail({ token: code, email });
+      const response = await authAPI.verifyEmail({ token: code, email });
       setMessage('Verified successfully. Redirecting to login...');
       if (onVerified) onVerified();
     } catch (err) {

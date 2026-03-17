@@ -39,87 +39,106 @@ const generateToken = (id, role) => {
 };
 
 /**
- * @desc    Register a new user or admin
+ * @desc    Register a new user or admin - Send OTP only, don't create user yet
  * @route   POST /api/auth/register
  * @access  Public
  */
 const registerUser = async (req, res) => {
-  const { name, email, password, phone, role } = req.body;
+  const { name, email, password, phone, role, otpMethod } = req.body;
 
   try {
-    // Check if user already exists
+    // Check if user already exists (verified or unverified)
     const userExists = await User.findOne({ email });
 
-    if (userExists) {
+    if (userExists && userExists.isVerified) {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    // Create new user
-    const user = await User.create({
+    // If unverified user exists, delete it and create a new one
+    if (userExists && !userExists.isVerified) {
+      await User.deleteOne({ _id: userExists._id });
+    }
+
+    // Generate numeric verification code (6 digits) and expiry
+    const token = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Send verification code via requested method
+    try {
+      const otp = token;
+      if (otpMethod === 'sms' && phone) {
+        const smsRes = await sendOtpToPhone(phone, otp, 'registration');
+        if (!smsRes || !smsRes.success) {
+          console.warn('[registerUser] SMS send failed, falling back to email');
+          await sendOtpMail(email, otp);
+        }
+      } else {
+        await sendOtpMail(email, otp);
+      }
+    } catch (emailErr) {
+      console.warn('Failed to send verification (email or sms)', emailErr);
+      return res.status(500).json({ message: 'Failed to send verification code' });
+    }
+
+    // Create a temporary unverified user record that will be activated after OTP verification
+    // This user will be deleted if OTP is not verified within 24 hours
+    const tempUser = await User.create({
       name,
       email,
-      password,
+      password, // Will be hashed by pre-save hook
       phone,
-      role: role || 'user', // Default to 'user' if role is not provided
+      role: role || 'user',
+      isVerified: false,
+      verifyToken: token,
+      verifyTokenExpires: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
     });
 
-    if (user) {
-      // Generate numeric verification code (6 digits) and expiry
-      const token = Math.floor(100000 + Math.random() * 900000).toString(); // e.g., '345901'
-      user.verifyToken = token;
-      user.verifyTokenExpires = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
-      user.isVerified = false;
-      await user.save();
-
-        // Send verification code via requested method if provided (keep email as default)
-        try {
-          const otp = token;
-          const otpMethod = req.body.otpMethod || 'email';
-          if (otpMethod === 'sms' && user.phone) {
-            // attempt SMS send; non-fatal if it fails
-            const smsRes = await sendOtpToPhone(user.phone, otp, 'registration');
-            if (!smsRes || !smsRes.success) {
-              console.warn('[registerUser] SMS send failed, falling back to email');
-              await sendOtpMail(email, otp);
-            }
-          } else {
-            await sendOtpMail(email, otp);
-          }
-        } catch (emailErr) {
-          console.warn('Failed to send verification (email or sms)', emailErr);
-        }
-
-      res.status(201).json({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        token: generateToken(user._id, user.role),
-        message: 'Registered successfully. Please check your email for a verification link.'
-      });
-    } else {
-      res.status(400).json({ message: 'Invalid user data' });
-    }
+    res.status(201).json({
+      _id: tempUser._id,
+      name: tempUser.name,
+      email: tempUser.email,
+      role: tempUser.role,
+      message: 'Registration initiated. Please verify your email/phone with the OTP code sent to you.'
+    });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
 /**
- * Verify email token (called from frontend or directly via link)
- * POST /api/auth/verify-email  { token }
+ * Verify email token and activate user account
+ * POST /api/auth/verify-email  { token, email }
  */
 const verifyEmail = async (req, res) => {
   const token = req.body.token || req.query.token;
+  const email = req.body.email;
+  
   if (!token) return res.status(400).json({ message: 'Missing token' });
+  if (!email) return res.status(400).json({ message: 'Missing email' });
+  
   try {
-    const user = await User.findOne({ verifyToken: token, verifyTokenExpires: { $gt: Date.now() } });
-    if (!user) return res.status(400).json({ message: 'Invalid or expired token' });
+    const user = await User.findOne({ 
+      email,
+      verifyToken: token, 
+      verifyTokenExpires: { $gt: Date.now() } 
+    });
+    
+    if (!user) {
+      // Token is invalid or expired - delete the unverified user
+      await User.deleteOne({ email, isVerified: false });
+      return res.status(400).json({ message: 'Invalid or expired token. Please register again.' });
+    }
+    
+    // Mark user as verified - this activates the account
     user.isVerified = true;
     user.verifyToken = '';
     user.verifyTokenExpires = undefined;
     await user.save();
-    res.json({ success: true, message: 'Email verified successfully' });
+    
+    res.json({ 
+      success: true, 
+      message: 'Email verified successfully. Your account is now active.',
+      token: generateToken(user._id, user.role)
+    });
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
@@ -127,25 +146,24 @@ const verifyEmail = async (req, res) => {
 
 /**
  * Resend verification email
- * POST /api/auth/resend-verification { email }
+ * POST /api/auth/resend-verification { email, phone, otpMethod }
  */
 const resendVerification = async (req, res) => {
-  const { email } = req.body;
+  const { email, phone, otpMethod } = req.body;
   if (!email) return res.status(400).json({ message: 'Email required' });
+  
   try {
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ message: 'User not found' });
     if (user.isVerified) return res.status(400).json({ message: 'User already verified' });
 
-  const token = Math.floor(100000 + Math.random() * 900000).toString();
-  user.verifyToken = token;
-  user.verifyTokenExpires = Date.now() + 24 * 60 * 60 * 1000;
+    const token = Math.floor(100000 + Math.random() * 900000).toString();
+    user.verifyToken = token;
+    user.verifyTokenExpires = Date.now() + 24 * 60 * 60 * 1000;
     await user.save();
 
     try {
       const otp = user.verifyToken;
-      const { otpMethod, phone } = req.body;
-      // prefer explicit otpMethod in body, otherwise default to email
       const method = otpMethod || 'email';
       if (method === 'sms') {
         const targetPhone = phone || user.phone;
@@ -156,7 +174,6 @@ const resendVerification = async (req, res) => {
             await sendOtpMail(user.email, otp);
           }
         } else {
-          // no phone provided - fall back to email
           await sendOtpMail(user.email, otp);
         }
       } else {
@@ -166,7 +183,7 @@ const resendVerification = async (req, res) => {
       console.warn('Failed to send verification (email or sms)', err);
     }
 
-    res.json({ success: true, message: 'Verification email sent' });
+    res.json({ success: true, message: 'Verification code sent' });
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
@@ -180,7 +197,6 @@ const resendVerification = async (req, res) => {
 const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
-
   try {
     // Check if user exists
     const user = await User.findOne({ email });
@@ -189,14 +205,16 @@ const loginUser = async (req, res) => {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    // Check if password matches (do not log the boolean in production if you prefer silence)
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      
-      return res.status(400).json({ message: 'Invalid credentials' });
+    // Check if user is verified
+    if (!user.isVerified) {
+      return res.status(403).json({ message: 'Please verify your email/phone before logging in' });
     }
 
-    
+    // Check if password matches
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
 
     // User is authenticated, return token
     res.status(200).json({
@@ -252,7 +270,7 @@ const resetPassword = async (req, res) => {
 
     res.json({ success: true, message: "Password updated successfully" });
   } catch (error) {
-    console.error("Reset password error:", error); // 👈 ADD THIS LINE
+    console.error("Reset password error:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
