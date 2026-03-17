@@ -7,7 +7,6 @@ const loginImg = "/media/logo.jpg";
 import { authAPI } from "../services/api";
 import PasswordInput from "../User-Frontend/components/PasswordInput";
 import { validatePassword } from "../User-Frontend/utils/passwordUtils";
-import { getCurrentLocation } from "../User-Frontend/utils/geolocation";
 import OtpModal from './components/OtpModal';
 
 export default function Register() {
@@ -115,20 +114,61 @@ export default function Register() {
 
   const handleUseCurrentLocation = () => {
     setLocationError("");
-    getCurrentLocation(
-      (addressData) => {
-        setNewAddress((prev) => ({
-          ...prev,
-          addressLine1: addressData.addressLine1 || prev.addressLine1,
-          city: addressData.city || prev.city,
-          postalCode: addressData.postalCode || prev.postalCode,
-          latitude: addressData.latitude,
-          longitude: addressData.longitude,
-        }));
+    if (!navigator.geolocation) {
+      setLocationError("Geolocation is not supported by your browser.");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const { latitude, longitude } = pos.coords;
+          // Call server-side reverse geocode to get structured address
+          try {
+            const { utilsAPI } = await import("../services/api");
+            const geo = await utilsAPI.reverseGeocode(latitude, longitude);
+            // geo: { formattedAddress, city, province, postalCode, country, latitude, longitude }
+            setNewAddress((prev) => ({
+              ...prev,
+              addressLine1: geo.formattedAddress || prev.addressLine1,
+              city: geo.city || prev.city,
+              postalCode: geo.postalCode || prev.postalCode,
+              latitude,
+              longitude,
+            }));
+          } catch (rgErr) {
+            console.error("Reverse geocode failed", rgErr);
+            const message =
+              rgErr?.response?.data?.message ||
+              rgErr?.message ||
+              "Unable to resolve your location to an address.";
+            setLocationError(message);
+          }
+        } catch (err) {
+          console.error("Geolocation handling failed", err);
+          setLocationError("Unable to read your location.");
+        }
       },
-      (errorMessage) => {
-        setLocationError(errorMessage);
-      }
+      (err) => {
+        let message =
+          "Unable to get location, please enter your address manually.";
+        switch (err.code) {
+          case err.PERMISSION_DENIED:
+            message =
+              "Location access denied. Please allow location access and try again.";
+            break;
+          case err.POSITION_UNAVAILABLE:
+            message = "Location information is unavailable.";
+            break;
+          case err.TIMEOUT:
+            message = "Location request timed out.";
+            break;
+          default:
+            break;
+        }
+        setLocationError(message);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
     );
   };
 

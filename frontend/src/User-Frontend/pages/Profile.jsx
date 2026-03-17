@@ -33,6 +33,8 @@ const Profile = () => {
   const [showAddresses, setShowAddresses] = useState(true);
   const [showOrderHistory, setShowOrderHistory] = useState(false);
   const [orderHistory, setOrderHistory] = useState([]);
+  const [ordersLoaded, setOrdersLoaded] = useState(false);
+  const [ordersLoading, setOrdersLoading] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [newPassword, setNewPassword] = useState("");
@@ -71,19 +73,8 @@ const Profile = () => {
     (async () => {
       setLoading(true);
       try {
-        // Try to get profile from backend (requires token)
-        let serverProfile = null;
-        try {
-          serverProfile = await profileAPI.getProfile();
-        } catch {
-          // fallback to AuthContext profile if available
-          try {
-            const authProfile = await fetchAuthProfile();
-            serverProfile = authProfile || null;
-          } catch {
-            serverProfile = null;
-          }
-        }
+        // Get profile from backend
+        const serverProfile = await profileAPI.getProfile();
 
         if (serverProfile && serverProfile._id) {
           // Map server shape to local profile fields
@@ -100,7 +91,8 @@ const Profile = () => {
           setProfile(mapped);
           setLoyaltyPointsState(serverProfile.loyaltyPoints || 0);
           setIsLoggedIn(true);
-          // persist to localStorage for other pages
+          
+          // Persist to localStorage for other pages
           localStorage.setItem(
             "userInfo",
             JSON.stringify({
@@ -109,60 +101,47 @@ const Profile = () => {
               _id: serverProfile._id,
             })
           );
-          // fetch orders from backend for this user
-          try {
-            const serverOrders = await orderAPI.getUserOrders();
-            setOrderHistory(serverOrders || []);
-          } catch (ordErr) {
-            console.error("Failed to load orders from server", ordErr);
-            // Do not fall back to localStorage; show empty history
-            setOrderHistory([]);
-          }
 
-          // Fetch addresses from backend
-          try {
-            const serverAddresses = await profileAPI.getAddresses();
-            setAddresses(
-              serverAddresses.map((addr) => ({ ...addr, id: String(addr._id) }))
-            );
-          } catch (addrErr) {
-            console.error("Failed to load addresses", addrErr);
-          }
-
-          // Check for pending address from registration
+          // Fetch addresses and handle pending address in parallel
           const pendingAddress = localStorage.getItem("pendingAddress");
-          if (pendingAddress) {
-            try {
-              const addressData = JSON.parse(pendingAddress);
-              const fullAddress = `${addressData.addressLine1}, ${addressData.city}, ${addressData.postalCode}`;
-              await profileAPI.addAddress({
-                label: addressData.label,
-                address: fullAddress,
-                city: addressData.city,
-                postalCode: addressData.postalCode,
-                isDefault: false,
-                latitude: addressData.latitude,
-                longitude: addressData.longitude,
-              });
-              // Refresh addresses list
-              const updatedAddresses = await profileAPI.getAddresses();
-              setAddresses(updatedAddresses.map((a) => ({ ...a, id: a._id })));
-              // Remove from localStorage
-              localStorage.removeItem("pendingAddress");
-            } catch (addErr) {
-              console.error("Failed to add pending address", addErr);
-              // Keep in localStorage for retry later
-            }
-          }
+          
+          Promise.all([
+            profileAPI.getAddresses().catch(() => []),
+            pendingAddress ? (async () => {
+              try {
+                const addressData = JSON.parse(pendingAddress);
+                const fullAddress = `${addressData.addressLine1}, ${addressData.city}, ${addressData.postalCode}`;
+                await profileAPI.addAddress({
+                  label: addressData.label,
+                  address: fullAddress,
+                  city: addressData.city,
+                  postalCode: addressData.postalCode,
+                  isDefault: false,
+                  latitude: addressData.latitude,
+                  longitude: addressData.longitude,
+                });
+                localStorage.removeItem("pendingAddress");
+                return profileAPI.getAddresses();
+              } catch (addErr) {
+                console.error("Failed to add pending address", addErr);
+                return null;
+              }
+            })() : Promise.resolve(null)
+          ]).then(([initialAddresses, updatedAddresses]) => {
+            const finalAddresses = updatedAddresses || initialAddresses;
+            setAddresses(
+              (finalAddresses || []).map((addr) => ({ ...addr, id: String(addr._id) }))
+            );
+          });
         } else {
           // No server profile - treat as logged out
           setIsLoggedIn(false);
-          setOrderHistory([]);
           setProfile(null);
         }
       } catch (err) {
         console.error("Profile load error", err);
         setError("Failed to load profile");
+        setIsLoggedIn(false);
       } finally {
         setLoading(false);
       }
@@ -467,6 +446,27 @@ const Profile = () => {
     if (userInfo.email) {
       localStorage.removeItem(`orders_${userInfo.email}`);
       setOrderHistory([]);
+    }
+  };
+
+  // Lazy load order history when user clicks to view it
+  const handleToggleOrderHistory = async () => {
+    const newShowState = !showOrderHistory;
+    setShowOrderHistory(newShowState);
+    
+    // Load orders only when opening and not already loaded
+    if (newShowState && !ordersLoaded && !ordersLoading) {
+      setOrdersLoading(true);
+      try {
+        const serverOrders = await orderAPI.getUserOrders();
+        setOrderHistory(serverOrders || []);
+        setOrdersLoaded(true);
+      } catch (ordErr) {
+        console.error("Failed to load orders from server", ordErr);
+        setOrderHistory([]);
+      } finally {
+        setOrdersLoading(false);
+      }
     }
   };
 
@@ -877,7 +877,7 @@ const Profile = () => {
               <div className="bg-[#3c2a1a] rounded-lg p-3 sm:p-4 shadow-md">
                 <div
                   className="flex justify-between items-center cursor-pointer mb-2"
-                  onClick={() => setShowOrderHistory(!showOrderHistory)}
+                  onClick={handleToggleOrderHistory}
                 >
                   <h3 className="text-sm sm:text-base font-semibold flex items-center gap-2">
                     <FaEnvelope className="text-sm sm:text-base" /> Order
@@ -890,7 +890,12 @@ const Profile = () => {
                 {showOrderHistory && (
                   <div className="max-h-40 overflow-y-auto scrollbar-thin scrollbar-thumb-orange-600 scrollbar-track-[#3c2a1a]">
                     <div>
-                      {isLoggedIn ? (
+                      {ordersLoading ? (
+                        <div className="text-center py-4">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto"></div>
+                          <p className="text-sm mt-2">Loading orders...</p>
+                        </div>
+                      ) : isLoggedIn ? (
                         orderHistory.length > 0 ? (
                           <>
                             {/*    <button
