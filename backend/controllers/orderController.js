@@ -383,7 +383,8 @@ const getOrders = async (req, res) => {
             createdAt: 1,
             'customerData.name': 1,
             'customerData.email': 1,
-            'customerData.phone': 1
+            'customerData.phone': 1,
+            customer: 1
           }
         },
         { $sort: { createdAt: -1 } },

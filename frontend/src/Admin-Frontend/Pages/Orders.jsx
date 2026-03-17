@@ -360,6 +360,12 @@ export default function Orders() {
                 <div className="space-y-2 text-sm">
                   <p><span className="font-medium">Order ID:</span> {selectedOrder.orderId || selectedOrder.id}</p>
                   <p><span className="font-medium">Customer:</span> {selectedOrder.customer}</p>
+                  {selectedOrder.raw?.customerData?.email && (
+                    <p><span className="font-medium">Email:</span> {selectedOrder.raw.customerData.email}</p>
+                  )}
+                  {selectedOrder.raw?.customerData?.phone && (
+                    <p><span className="font-medium">Phone:</span> {selectedOrder.raw.customerData.phone}</p>
+                  )}
                   <p><span className="font-medium">Date:</span> {selectedOrder.date} at {selectedOrder.time}</p>
                   <p><span className="font-medium">Payment:</span> {selectedOrder.payment}</p>
                 </div>
