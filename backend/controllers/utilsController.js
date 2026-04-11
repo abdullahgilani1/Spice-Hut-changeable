@@ -6,7 +6,6 @@ const reverseGeocode = async (req, res) => {
   try {
     // Accept both POST body and GET query params for easier testing
     const payload = (req.method === 'GET') ? req.query : (req.body || {});
-    console.log('[utilsController] reverseGeocode called, payload:', payload);
     const { latitude, longitude } = payload || {};
     if (typeof latitude === 'undefined' || typeof longitude === 'undefined') {
       return res.status(400).json({ message: 'latitude and longitude are required in body' });
@@ -17,10 +16,8 @@ const reverseGeocode = async (req, res) => {
       console.error('[utilsController] Missing GOOGLE_MAPS_API_KEY in environment');
       return res.status(500).json({ message: 'Google Maps API key not configured on server' });
     }
-    console.log('[utilsController] Using API key:', apiKey.substring(0, 10) + '...');
 
     const latlng = `${latitude},${longitude}`;
-    console.log('[utilsController] Geocoding coordinates:', latlng);
     const url = new URL('https://maps.googleapis.com/maps/api/geocode/json');
     url.searchParams.set('latlng', latlng);
     url.searchParams.set('key', apiKey);
@@ -35,14 +32,11 @@ const reverseGeocode = async (req, res) => {
       }).on('error', (err) => reject(err));
     });
 
-    // Log full Google API response for debugging
-    console.log('[utilsController] Full geocode response:', JSON.stringify(data, null, 2));
     if (!data) return res.status(502).json({ message: 'Empty response from geocoding service' });
     if (data.status && data.status !== 'OK') {
       // return helpful message depending on status
       if (data.status === 'ZERO_RESULTS') return res.status(404).json({ message: 'No address found for coordinates (ZERO_RESULTS)' });
       if (data.status === 'REQUEST_DENIED') {
-        console.error('[utilsController] REQUEST_DENIED details:', data.error_message);
         return res.status(502).json({ 
           message: 'Google Maps API request denied',
           error: data.error_message || 'No error message provided',
@@ -129,7 +123,7 @@ const reverseGeocode = async (req, res) => {
           formatted.postalCode = nomData.address.postcode;
         }
       } catch (osmErr) {
-        console.warn('[utilsController] OSM fallback failed', osmErr && osmErr.message ? osmErr.message : osmErr);
+        // OSM fallback failed silently
       }
     }
 
