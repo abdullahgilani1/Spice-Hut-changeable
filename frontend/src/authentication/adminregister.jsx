@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authAPI } from '../services/api';
+import OtpModal from './components/OtpModal';
 
 export default function AdminRegister() {
   const navigate = useNavigate();
@@ -13,6 +14,11 @@ export default function AdminRegister() {
     password: '',
     confirmPassword: '',
   });
+  const [otpMethod, setOtpMethod] = useState('email');
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [modalEmail, setModalEmail] = useState('');
+  const [modalPhone, setModalPhone] = useState('');
+  const [modalOtpMethod, setModalOtpMethod] = useState('email');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -37,14 +43,23 @@ export default function AdminRegister() {
         email: formData.email,
         phone: formData.phone,
         password: formData.password,
+        otpMethod,
         role: 'admin',
       });
-      navigate('/login');
+      // After successful registration, open the inline OTP modal so admin can verify immediately
+      setModalEmail(formData.email);
+      setModalPhone(formData.phone);
+      setModalOtpMethod(otpMethod);
+      setShowOtpModal(true);
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Failed to register');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleOtpVerified = () => {
+    navigate('/login');
   };
 
   return (
@@ -58,12 +73,53 @@ export default function AdminRegister() {
           <input type="tel" name="phone" placeholder="Phone Number" required onChange={handleChange} className="w-full p-3 rounded bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-[#B35B00]" />
           <input type="password" name="password" placeholder="Password" required onChange={handleChange} className="w-full p-3 rounded bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-[#B35B00]" />
           <input type="password" name="confirmPassword" placeholder="Confirm Password" required onChange={handleChange} className="w-full p-3 rounded bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-[#B35B00]" />
+          
+          {/* OTP Method Selection */}
+          <div className="bg-gray-800 rounded p-3">
+            <p className="text-gray-300 text-sm mb-2">Verification Method</p>
+            <div className="flex gap-4">
+              <label className="flex items-center text-white">
+                <input 
+                  type="radio" 
+                  name="otpMethod" 
+                  value="email" 
+                  checked={otpMethod === 'email'} 
+                  onChange={(e) => setOtpMethod(e.target.value)}
+                  className="mr-2"
+                />
+                Email OTP
+              </label>
+              <label className="flex items-center text-white">
+                <input 
+                  type="radio" 
+                  name="otpMethod" 
+                  value="sms" 
+                  checked={otpMethod === 'sms'} 
+                  onChange={(e) => setOtpMethod(e.target.value)}
+                  className="mr-2"
+                />
+                SMS OTP
+              </label>
+            </div>
+          </div>
+
           <button type="submit" disabled={loading} className="w-full bg-[#4B0B0B] text-white py-3 rounded hover:bg-[#FFB366] hover:text-black transition-all disabled:bg-gray-500">
             {loading ? 'Registering...' : 'Register as Admin'}
           </button>
         </form>
         <p className="text-center text-white mt-4">Already have an account? <Link to="/login" className="text-[#FFB366] hover:underline">Login</Link></p>
       </div>
+
+      {/* OTP Verification Modal */}
+      {showOtpModal && (
+        <OtpModal 
+          email={modalEmail}
+          phone={modalPhone}
+          otpMethod={modalOtpMethod}
+          onClose={() => setShowOtpModal(false)}
+          onVerified={handleOtpVerified}
+        />
+      )}
     </div>
   );
 }
