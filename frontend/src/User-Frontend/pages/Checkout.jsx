@@ -10,8 +10,7 @@ import {
   FaLocationArrow,
 } from "react-icons/fa";
 import { useCart } from "../context.cart.jsx";
-import { orderAPI, profileAPI } from "../../services/api";
-import { getCurrentLocation } from "../utils/geolocation";
+import { orderAPI, profileAPI, utilsAPI } from "../../services/api";
 
 const DarkCard = ({ children, className = "" }) => (
   <div
@@ -45,9 +44,12 @@ export default function Checkout() {
     city: "",
     postalCode: "",
     instructions: "",
+    latitude: null,
+    longitude: null,
   });
   const [editingAddressId, setEditingAddressId] = useState(null);
   const [editingAddress, setEditingAddress] = useState(null);
+  const [locationError, setLocationError] = useState(null);
 
   // Load data from localStorage or backend on mount
   useEffect(() => {
@@ -192,6 +194,7 @@ export default function Checkout() {
           latitude: null,
           longitude: null,
         });
+        setLocationError(null);
         setShowAddAddress(false);
       } catch (error) {
         console.error("Failed to add address:", error);
@@ -200,23 +203,63 @@ export default function Checkout() {
     }
   };
 
-  // Handle geolocation
+  // Handle geolocation using server-side reverse geocoding
   const handleUseCurrentLocation = () => {
-    setShowAddAddress(true); // Open the add address form
-    getCurrentLocation(
-      (address) => {
-        setNewAddress((prev) => ({
-          ...prev,
-          addressLine1: address.addressLine1,
-          city: address.city,
-          postalCode: address.postalCode,
-          latitude: address.latitude,
-          longitude: address.longitude,
-        }));
+    setLocationError(null);
+    if (!navigator.geolocation) {
+      setLocationError("Geolocation is not supported by your browser.");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const { latitude, longitude } = pos.coords;
+          // Call server-side reverse geocode to get structured address
+          try {
+            const geo = await utilsAPI.reverseGeocode(latitude, longitude);
+            // geo: { formattedAddress, city, province, postalCode, country, latitude, longitude }
+            setNewAddress((prev) => ({
+              ...prev,
+              addressLine1: geo.formattedAddress || prev.addressLine1,
+              city: geo.city || prev.city,
+              postalCode: geo.postalCode || prev.postalCode,
+              latitude,
+              longitude,
+            }));
+          } catch (rgErr) {
+            console.error("Reverse geocode failed", rgErr);
+            const message =
+              rgErr?.response?.data?.message ||
+              rgErr?.message ||
+              "Unable to resolve your location to an address.";
+            setLocationError(message);
+          }
+        } catch (err) {
+          console.error("Geolocation handling failed", err);
+          setLocationError("Unable to read your location.");
+        }
       },
-      (error) => {
-        alert(error);
-      }
+      (err) => {
+        let message =
+          "Unable to get location, please enter your address manually.";
+        switch (err.code) {
+          case err.PERMISSION_DENIED:
+            message =
+              "Location access denied. Please allow location access and try again.";
+            break;
+          case err.POSITION_UNAVAILABLE:
+            message = "Location information is unavailable.";
+            break;
+          case err.TIMEOUT:
+            message = "Location request timed out.";
+            break;
+          default:
+            break;
+        }
+        setLocationError(message);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
     );
   };
 
@@ -502,6 +545,11 @@ export default function Checkout() {
                           <FaLocationArrow /> Use my current location
                         </button>
                       </div>
+                      {locationError && (
+                        <div className="text-red-400 text-sm">
+                          {locationError}
+                        </div>
+                      )}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <input
                           type="text"
