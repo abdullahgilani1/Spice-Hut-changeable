@@ -728,8 +728,8 @@ export default function MenuManagement() {
 
       {/* Edit Menu Item Modal */}
       {showEditModal && editItem && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
+          <div className="bg-white rounded-2xl p-4 sm:p-8 max-w-sm sm:max-w-md w-full mx-4 my-4 max-h-[90vh] overflow-y-auto">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">
               Edit Menu Item
             </h2>
@@ -877,8 +877,8 @@ export default function MenuManagement() {
       )}
       {/* Add Category Modal */}
       {showAddCategoryModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
+          <div className="bg-white rounded-2xl p-4 sm:p-8 max-w-sm sm:max-w-md w-full mx-4 my-4 max-h-[90vh] overflow-y-auto">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">
               Add New Category
             </h2>
