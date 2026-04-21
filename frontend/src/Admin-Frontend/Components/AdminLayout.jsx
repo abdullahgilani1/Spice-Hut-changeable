@@ -9,7 +9,7 @@ export default function AdminLayout() {
 
   return (
     <div className="min-h-screen bg-gray-100 flex font-sans">
-      <div className="sticky top-0 h-screen">
+      <div className="sticky top-0 h-screen z-50">
         <Sidebar
           collapsed={sidebarCollapsed}
           setCollapsed={setSidebarCollapsed}
@@ -17,7 +17,7 @@ export default function AdminLayout() {
           setOpen={setSidebarOpen}
         />
       </div>
-      <div className="flex flex-col flex-1 min-w-0 md:transition-all">
+      <div className="flex flex-col flex-1 min-w-0 md:transition-all z-0">
         <Navbar
           setSidebarCollapsed={setSidebarCollapsed}
           sidebarCollapsed={sidebarCollapsed}
