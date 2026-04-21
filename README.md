@@ -2,7 +2,7 @@
 
 A full-stack restaurant ordering platform built with React, Node.js, Express, and MongoDB. Features include online ordering, menu management, branch management, customer loyalty points, and admin dashboard.
 
-🌐 **Live Demo**: [https://spicehutcanada.com](https://spicehutcanada.com)
+🌐 **Live Demo**: [https://spicehutcanada.org](https://spicehutcanada.org)
 
 ## Features
 
