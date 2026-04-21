@@ -40,7 +40,7 @@ import axios from 'axios';
 // Create axios instance with base configuration
 const api = axios.create({
   
-  baseURL: 'https://spicehutcanada.org/api' || 'https://spicehutcanada.com/api',
+  baseURL: `https://${window.location.hostname}/api`,
 
   timeout: 10000,
   headers: {
